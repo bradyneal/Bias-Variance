@@ -12,7 +12,7 @@ class NNTrainer:
     Class for training neural networks and outputing various measures of the
     information the weights contain.
     """
-    
+
     def __init__(self, batch_size=64, test_batch_size=1000, epochs=10, lr=0.01, 
                momentum=0.5, no_cuda=False, seed=False, log_interval=100):
         self.batch_size = batch_size
@@ -23,7 +23,7 @@ class NNTrainer:
         self.cuda = not no_cuda and torch.cuda.is_available()
         self.seed = seed
         self.log_interval = log_interval
-        
+
         if self.cuda:
             print('Using CUDA')
         else:
@@ -32,13 +32,13 @@ class NNTrainer:
             torch.manual_seed(seed)
             if self.cuda:
                 torch.cuda.manual_seed(seed)
-        
+
         # Create network and optimizer
         self.model = Net()
         if self.cuda:
             self.model.cuda()
         self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
-        
+
         # Load data
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
         self.train_loader = torch.utils.data.DataLoader(
@@ -54,7 +54,7 @@ class NNTrainer:
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
             batch_size=test_batch_size, shuffle=True, **kwargs)
-    
+
     def train_step(self, epoch=1):
         self.model.train()
         for batch_idx, (data, target) in enumerate(self.train_loader):
@@ -66,26 +66,30 @@ class NNTrainer:
             loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
-            if batch_idx % args.log_interval == 0:
+            if batch_idx % self.log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.data[0]))
-       
+                    epoch, batch_idx * len(data), len(self.train_loader.dataset),
+                    100. * batch_idx / len(self.train_loader), loss.data[0]))
+
     def train(self, epochs=None, test=False):
+        if test:
+            test_seq = []
         if epochs is None:
             epochs = self.epochs
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
             if test:
-                self.test()
+                test_seq.append(self.test())
+        if test:
+            return test_seq
                     
-    def test(self, return_correct=False):
+    def test(self, return_correct=True):
         self.model.eval()
         test_loss = 0
         num_correct = 0
         correct = torch.ByteTensor(0, 1)
         for data, target in self.test_loader:
-            if args.cuda:
+            if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
             output = self.model(data)
@@ -95,10 +99,10 @@ class NNTrainer:
             correct = torch.cat([correct, batch_correct], 0)
             num_correct += batch_correct.cpu().sum()
 
-        test_loss /= len(test_loader.dataset)
+        test_loss /= len(self.test_loader.dataset)
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, num_correct, len(test_loader.dataset),
-            100. * num_correct / len(test_loader.dataset)))
+            test_loss, num_correct, len(self.test_loader.dataset),
+            100. * num_correct / len(self.test_loader.dataset)))
         if return_correct:
             return correct
         
