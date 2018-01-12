@@ -30,7 +30,7 @@ class ShallowNet(nn.Module):
         
     def forward(self, x):
         x = x.view(-1, MNIST_D)
-        h = self.fc1(x)
+        h = F.relu(self.fc1(x))
         out = self.fc2(h)
         return F.log_softmax(out)
     
@@ -46,8 +46,8 @@ class MinDeepNet(nn.Module):
         
     def forward(self, x):
         x = x.view(-1, MNIST_D)
-        h1 = self.fc1(x)
-        h2= self.fc2(h1)
+        h1 = F.relu(self.fc1(x))
+        h2= F.relu(self.fc2(h1))
         out = self.fc3(h2)
         return F.log_softmax(out)
     
