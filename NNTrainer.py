@@ -14,13 +14,14 @@ class NNTrainer:
     information the weights contain.
     """
 
-    def __init__(self, model, batch_size=64, test_batch_size=1000, epochs=10,
-                 lr=0.01, momentum=0.5, no_cuda=False, seed=False,
-                 log_interval=100):
+    def __init__(self, model, batch_size=64, test_batch_size=10000, epochs=10,
+                 lr=0.01, decay=False, step_size=10, gamma=0.1, momentum=0.5,
+                 no_cuda=False, seed=False, log_interval=100):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
         self.lr = lr
+        self.decay = decay
         self.momentum = momentum
         self.cuda = not no_cuda and torch.cuda.is_available()
         self.seed = seed
@@ -40,6 +41,9 @@ class NNTrainer:
         if self.cuda:
             self.model.cuda()
         self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
+        if decay:
+            self.scheduler = optim.lr_scheduler.StepLR(
+                self.optimizer, step_size=step_size, gamma=gamma)
 
         # Load data
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
@@ -55,9 +59,11 @@ class NNTrainer:
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
-            batch_size=test_batch_size, shuffle=True, **kwargs)
+            batch_size=test_batch_size, shuffle=False, **kwargs)
 
     def train_step(self, epoch=1):
+        if self.decay:
+            self.scheduler.step()
         self.model.train()
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.cuda:
