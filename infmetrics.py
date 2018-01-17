@@ -2,6 +2,7 @@ from __future__ import division
 from itertools import combinations
 from scipy.spatial.distance import hamming
 import numpy as np
+import torch
 
 
 def get_pairwise_dists(seqs, metric):
@@ -46,6 +47,11 @@ def get_pairwise_disagreements(seqs):
     return get_pairwise_dists(seqs, get_disagreement)
 
 
+def get_pairwise_weight_dists(seqs):
+    """"Same as above, but using the distance in weight space"""
+    return get_pairwise_dists(seqs, get_weight_dist)
+
+
 def get_agreement(seq1, seq2, mis_label=0):
     """
     Return the symmetric 'agreement' between two sequences where
@@ -66,3 +72,9 @@ def get_disagreement(seq1, seq2, mis_label=0):
     mis_label is the label that indicates an example was misclassified.
     """
     return 1 - get_agreement(seq1, seq2, mis_label=0)
+
+
+def get_weight_dist(w1, w2, p=2):
+    """Get distance between models in weight space"""
+    return torch.norm(w1 - w2, p=p)
+    
