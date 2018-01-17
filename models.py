@@ -6,8 +6,14 @@ import torch.nn.functional as F
 MNIST_D = 784   # 28 x 28
 MNIST_K = 10
 
+class nn_custom_super(nn.Module):
+    
+    def get_params(self):
+        """Return parameters of the neural network as a vector"""
+        return torch.cat([p.data.view(-1) for p in self.parameters()], dim=0)
+    
 
-class Linear(nn.Module):
+class Linear(nn_custom_super):
     """Linear classifier"""
     
     def __init__(self):
@@ -20,7 +26,7 @@ class Linear(nn.Module):
         return F.log_softmax(out)
     
     
-class ShallowNet(nn.Module):
+class ShallowNet(nn_custom_super):
     """Shallow neural network"""
     
     def __init__(self, num_hidden):
@@ -34,8 +40,9 @@ class ShallowNet(nn.Module):
         out = self.fc2(h)
         return F.log_softmax(out)
     
+    
 
-class MinDeepNet(nn.Module):
+class MinDeepNet(nn_custom_super):
     """Neural network with 2 layers"""
     
     def __init__(self, num_hidden1, num_hidden2):
@@ -52,7 +59,7 @@ class MinDeepNet(nn.Module):
         return F.log_softmax(out)
     
 
-class ExampleNet(nn.Module):
+class ExampleNet(nn_custom_super):
     """Neural network from the copied PyTorch example"""
     
     def __init__(self):
