@@ -3,9 +3,13 @@ from NNTrainer import NNTrainer
 from models import Linear, ShallowNet, MinDeepNet, ExampleNet
 from infmetrics import get_pairwise_hamming_dists, get_pairwise_disagreements, \
                        get_pairwise_weight_dists
+import torch
+import os
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+
+slurm_id = os.environ["SLURM_JOB_ID"]
 
 DEFAULT_WIDTH = 6
 DEFAULT_HEIGHT = 4
@@ -18,7 +22,7 @@ def print_summary(l, message):
 def run_nn_exp(num_hidden):
     bitmaps_shallow = []
     weights = []
-    for _ in range(20):
+    for i in range(20):
     # for _ in range(5):
         shallow_net = ShallowNet(num_hidden)
         trainer = NNTrainer(shallow_net, lr=0.1, momentum=0.5, epochs=10)
@@ -27,6 +31,8 @@ def run_nn_exp(num_hidden):
         bitmap_shallow = trainer.test()
         bitmaps_shallow.append(bitmap_shallow)
         weights.append(shallow_net.get_params())
+        model_name = 'saved_models/shallow%d_run%d_job%s.pt' % (num_hidden, i, slurm_id)
+        torch.save(shallow_net, model_name)
     all_ham_dists, _ = get_pairwise_hamming_dists(bitmaps_shallow)
     all_disagreements, _ = get_pairwise_disagreements(bitmaps_shallow)
     all_weight_dists, _ = get_pairwise_weight_dists(weights)
