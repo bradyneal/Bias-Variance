@@ -41,9 +41,10 @@ if __name__ == '__main__':
     # hidden_sizes = [5, 50]
     num_exp = len(hidden_sizes)
     num_plots_per_exp = 2
-    plt.figure(figsize=((DEFAULT_WIDTH + 1) * num_plots_per_exp, DEFAULT_HEIGHT))
     for num_hidden in hidden_sizes:
         all_ham_dists, all_disagreements, all_weight_dists = run_nn_exp(num_hidden)
+        
+        plt.figure(figsize=((DEFAULT_WIDTH + 1) * num_plots_per_exp, DEFAULT_HEIGHT))
         
         plt.subplot(1, num_plots_per_exp, 1)
         plt.plot(all_weight_dists, all_ham_dists, 'o')
