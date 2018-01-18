@@ -103,9 +103,9 @@ class NNTrainer:
             output = self.model(data)
             test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred))
+            batch_correct = pred.eq(target.data.view_as(pred)).cpu()
             correct = torch.cat([correct, batch_correct], 0)
-            num_correct += batch_correct.cpu().sum()
+            num_correct += batch_correct.sum()
 
         test_loss /= len(self.test_loader.dataset)
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
