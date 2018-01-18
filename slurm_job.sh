@@ -5,4 +5,4 @@ source ~/.bashrc
 export PYTHONUNBUFFERED=1
 echo Running on $HOSTNAME
 
-python exp_nn.py
+python exp_shallow_nn.py
