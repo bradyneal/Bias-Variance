@@ -4,6 +4,7 @@ from scipy.spatial.distance import hamming
 import numpy as np
 import torch
 from functools import partial
+from math import sqrt
 
 
 def get_pairwise_dists(seqs, metric):
@@ -83,8 +84,11 @@ def get_disagreement(seq1, seq2, mis_label=0):
 
 
 def get_weight_dist(w1, w2, p=2):
-    """Get distance between models in weight space"""
-    return torch.norm(w1 - w2, p=p)
+    """
+    Return the distance between models in weight space, normalized by the
+    square root of the dimension
+    """
+    return torch.norm(w1 - w2, p=p) / sqrt(len(w1))
 
 
 def expected_hamming(p):
