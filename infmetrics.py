@@ -3,6 +3,7 @@ from itertools import combinations
 from scipy.spatial.distance import hamming
 import numpy as np
 import torch
+from functools import partial
 
 
 def get_pairwise_dists(seqs, metric):
@@ -35,6 +36,13 @@ def get_pairwise_hamming_dists(seqs):
     between the the ith and jth sequence.
     """
     return get_pairwise_dists(seqs, hamming)
+
+
+def get_pairwise_hamming_diffs(seqs, p):
+    """
+    Same as above, but using the relative hamming distance metric defined below
+    """
+    return get_pairwise_dists(seqs, partial(hamming_diff, p=p))
 
 
 def get_pairwise_agreements(seqs):
@@ -77,4 +85,26 @@ def get_disagreement(seq1, seq2, mis_label=0):
 def get_weight_dist(w1, w2, p=2):
     """Get distance between models in weight space"""
     return torch.norm(w1 - w2, p=p)
-    
+
+
+def expected_hamming(p):
+    """
+    Return the expected hamming distance between two random vectors X and Y,
+    under the following assumptions:
+    1. P(X_i = Y_i) = P(X_j = Y_j). In words, this means (X_i, Y_i) and
+    (X_j, Y_j) are identically jointly distributed. In other words, all data
+    points are equally easy (or hard) to learn (this is an empirically false
+    assumption).
+    2. X_i and Y_i are conditionally independent (conditioned on i). In other
+    words, the predictions between any two learned models on the same test
+    example are independent (obviously false assumption).
+    """
+    return 2 * p * (1 - p)
+
+
+def hamming_diff(seq1, seq2, p):
+    """
+    Return the difference between the hamming distance of the two sequences and
+    the expected hamming distance between two random vectors.
+    """
+    return hamming(seq1, seq2) - expected_hamming(p)
