@@ -2,7 +2,7 @@ from __future__ import print_function
 from NNTrainer import NNTrainer
 from models import Linear, ShallowNet, MinDeepNet, ExampleNet
 from infmetrics import get_pairwise_hamming_dists, get_pairwise_disagreements, \
-                       get_pairwise_weight_dists
+                       get_pairwise_weight_dists_normalized
 import torch
 import os
 import re
@@ -14,6 +14,8 @@ slurm_id = os.environ["SLURM_JOB_ID"]
 
 DEFAULT_WIDTH = 6
 DEFAULT_HEIGHT = 4
+HIDDEN_SIZES = [5, 10, 15, 25, 50, 100, 250, 500]
+LAST_HIDDEN_SIZE = HIDDEN_SIZES[-1]
 
 SAVED_MODELS_DIR = 'saved_models'
 
@@ -22,7 +24,7 @@ def run_nn_exp(num_hidden, retrain=False):
     bitmaps, weights = get_nn_information(num_hidden, retrain=retrain)
     all_ham_dists, _ = get_pairwise_hamming_dists(bitmaps)
     all_disagreements, _ = get_pairwise_disagreements(bitmaps)
-    all_weight_dists, _ = get_pairwise_weight_dists(weights)
+    all_weight_dists, _ = get_pairwise_weight_dists_normalized(weights)
     print_summary(all_ham_dists, '%s RESULT for %d hidden units' % ('hamming', num_hidden))
     print_summary(all_disagreements, '%s RESULT for %d hidden units' % ('disagreement', num_hidden))
     print_summary(all_weight_dists, '%s RESULT for %d hidden units' % ('weights', num_hidden))
@@ -82,7 +84,9 @@ def print_summary(l, message):
 def plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists,
                  same_figure=False):
     num_plots_per_exp = 2
-    if not same_figure:
+    if same_figure:
+        plt.figure('Cumulative', figsize=((DEFAULT_WIDTH + 1) * num_plots_per_exp, DEFAULT_HEIGHT))
+    else:
         plt.figure(figsize=((DEFAULT_WIDTH + 1) * num_plots_per_exp, DEFAULT_HEIGHT))
     
     plt.subplot(1, num_plots_per_exp, 1)
@@ -97,13 +101,12 @@ def plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists,
     plt.xlabel('weight distance')
     plt.ylabel('disagreement')
     
-    if same_figure:
-        plt.savefig('figures/shallow_exp_cum%d.png' % num_hidden)
+    if same_figure and num_hidden == LAST_HIDDEN_SIZE:
+        plt.savefig('figures/shallow_exp_all.png')
     else:
         plt.savefig('figures/shallow_exp%d.png' % num_hidden)
 
         
 if __name__ == '__main__':
-    hidden_sizes = [5, 10, 15, 25, 50, 100, 250, 500]
-    for num_hidden in hidden_sizes:
+    for num_hidden in HIDDEN_SIZES:
         run_nn_exp(num_hidden)

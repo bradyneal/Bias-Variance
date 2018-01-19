@@ -61,6 +61,11 @@ def get_pairwise_weight_dists(seqs):
     return get_pairwise_dists(seqs, get_weight_dist)
 
 
+def get_pairwise_weight_dists_normalized(seqs):
+    """"Same as above, but using the normalized distance in weight space"""
+    return get_pairwise_dists(seqs, get_weight_dist_normalized)
+
+
 def get_agreement(seq1, seq2, mis_label=0):
     """
     Return the symmetric 'agreement' between two sequences where
@@ -84,11 +89,16 @@ def get_disagreement(seq1, seq2, mis_label=0):
 
 
 def get_weight_dist(w1, w2, p=2):
+    """Return the distance between models in weight space"""
+    return torch.norm(w1 - w2, p=p)
+
+
+def get_weight_dist_normalized(w1, w2, p=2):
     """
     Return the distance between models in weight space, normalized by the
     square root of the dimension
     """
-    return torch.norm(w1 - w2, p=p) / sqrt(len(w1))
+    return get_weight_dist(w1, w2, p=p) / sqrt(len(w1))
 
 
 def expected_hamming(p):
