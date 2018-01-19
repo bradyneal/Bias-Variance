@@ -1,7 +1,7 @@
 from __future__ import print_function
 from NNTrainer import NNTrainer
 from models import Linear, ShallowNet, MinDeepNet, ExampleNet
-from infmetrics import get_pairwise_hamming_dists, get_pairwise_disagreements, \
+from infmetrics import get_pairwise_hamming_diffs, get_pairwise_disagreements, \
                        get_pairwise_weight_dists_normalized
 import torch
 import os
@@ -17,7 +17,13 @@ DEFAULT_HEIGHT = 4
 HIDDEN_SIZES = [5, 10, 15, 25, 50, 100, 250, 500]
 LAST_HIDDEN_SIZE = HIDDEN_SIZES[-1]
 
-SAVED_MODELS_DIR = 'saved_models'
+OUTPUT_DIR = '/data/milatmp1/nealbray/information-paths/'
+SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
+SAVED_MODELS_DIR = os.path.join(SAVED_DIR, 'models')
+SAVED_MODEL_INF_DIR =  os.path.join(SAVED_DIR, 'model_inf')
+SAVED_BITMAP_DIR =  os.path.join(SAVED_MODEL_INF_DIR, 'bitmaps')
+SAVED_WEIGHTS_DIR =  os.path.join(SAVED_MODEL_INF_DIR, 'weights')
+
 
 
 def run_nn_exp(num_hidden, retrain=False):
@@ -28,50 +34,87 @@ def run_nn_exp(num_hidden, retrain=False):
     print_summary(all_ham_dists, '%s RESULT for %d hidden units' % ('hamming', num_hidden))
     print_summary(all_disagreements, '%s RESULT for %d hidden units' % ('disagreement', num_hidden))
     print_summary(all_weight_dists, '%s RESULT for %d hidden units' % ('weights', num_hidden))
+    print()
     plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists, same_figure=False)
     plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists, same_figure=True)
     # return all_ham_dists, all_disagreements, all_weight_dists
 
 
-def get_nn_information(num_hidden, retrain=False):
+def get_nn_information(num_hidden, retrain=False, retest=False):
     """
     Get neural network the 'information' stored in the neural networks
     (currently, test set bitmaps and weights), loading the neural networks
     from disk if they already exist and rerun isn't set to true.
     """
-    # Decide whether or not to load existing neural networks
-    saved_models = os.listdir(SAVED_MODELS_DIR)
-    load_models = not retrain
-    if len(saved_models) > 0:
-        match = re.match(r'shallow\d+_run\d+_job(\d+).pt', saved_models[0])
-        if match is None:
-            load_models = False
-        else:
+    # Regular expression used for common file naming
+    regexp = r'shallow%d_run\d+_job(\d+).pt' % num_hidden
+    
+    # Decide whether or not to load existing model information
+    saved_bitmaps = os.listdir(SAVED_BITMAP_DIR)
+    saved_weights = os.listdir(SAVED_BITMAP_DIR)
+    load_model_inf = (not retest) and len(saved_bitmaps) > 0
+    if load_model_inf:
+        match_gen = (re.match(regexp, bitmap_fn) for bitmap_fn in saved_bitmaps)
+        match = next((m for m in match_gen if m), False)
+        if match:
             saved_slurm_id = match.groups()[0]
+        else:
+            load_model_inf = False
+    
+    # Decide whether or not to load existing models
+    saved_models = os.listdir(SAVED_MODELS_DIR)
+    load_models = (not load_model_inf) and (not retrain) and len(saved_models) > 0
     if load_models:
-        print('Saved models found... loading them')
+        match_gen = (re.match(regexp, model_fn) for model_fn in saved_models)
+        match = next((m for m in match_gen if m), False)
+        if match:
+            saved_slurm_id = match.groups()[0]
+        else:
+            load_models = False
+            
+    if load_model_inf:
+        print('Saved model information found! Loading it...')
+    elif load_models:
+        print('Saved models found! Loading them...')
     else:
-        print('No saved models found... running training')
+        print('No saved models found or purposefully retraining. Running training...')
+        exit('Not tryna retrain right now, mate')
             
     bitmaps = []
     weights = []
     for i in range(20):
-        # Load or train neural network
-        if load_models:
-            shallow_net = torch.load('saved_models/shallow%d_run%d_job%s.pt' % \
-                                     (num_hidden, i, saved_slurm_id))
-            trainer = NNTrainer(shallow_net)    # no training necessary
-        else:
-            shallow_net = ShallowNet(num_hidden)
-            trainer = NNTrainer(shallow_net, lr=0.1, momentum=0.5, epochs=10)
-            trainer.train(test=True)
-            torch.save(shallow_net, 'saved_models/shallow%d_run%d_job%s.pt' % \
-                                    (num_hidden, i, slurm_id))
+        # Common file naming
+        save_model_fn = 'shallow%d_run%d_job%s.pt' % (num_hidden, i, slurm_id)
+        save_info_fn = save_model_fn
+        if load_model_inf or load_models:
+            load_fn = 'shallow%d_run%d_job%s.pt' % (num_hidden, i, saved_slurm_id)
+            save_info_fn = load_fn
         
-        # Test and append bitmaps and weights to output lists    
-        bitmap = trainer.test()
+        # Load model information (fastest)
+        if load_model_inf:
+            bitmap = torch.load(os.path.join(SAVED_BITMAP_DIR, load_fn))
+            weight_vec = torch.load(os.path.join(SAVED_WEIGHTS_DIR, load_fn))
+        else:
+            # Load models and test them (fast)
+            if load_models:
+                shallow_net = torch.load(os.path.join(SAVED_MODELS_DIR,
+                                                      load_fn))
+                trainer = NNTrainer(shallow_net)    # no training necessary
+            # Train models (slow)
+            else:
+                shallow_net = ShallowNet(num_hidden)
+                trainer = NNTrainer(shallow_net, lr=0.1, momentum=0.5, epochs=10)
+                trainer.train(test=True)
+                torch.save(shallow_net, os.path.join(SAVED_MODELS_DIR,
+                                                     save_fn))
+            bitmap = trainer.test()
+            weight_vec = shallow_net.get_params()
+            torch.save(bitmap, os.path.join(SAVED_BITMAP_DIR, save_info_fn))
+            torch.save(weight_vec, os.path.join(SAVED_WEIGHTS_DIR, save_info_fn))
+        
+        # Append bitmaps and weights to output lists    
         bitmaps.append(bitmap)
-        weights.append(shallow_net.get_params())
+        weights.append(weight_vec)
     
     return bitmaps, weights
 
