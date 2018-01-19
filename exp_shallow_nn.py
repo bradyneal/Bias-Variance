@@ -101,8 +101,9 @@ def plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists,
     plt.xlabel('weight distance')
     plt.ylabel('disagreement')
     
-    if same_figure and num_hidden == LAST_HIDDEN_SIZE:
-        plt.savefig('figures/shallow_exp_all.png')
+    if same_figure:
+        if num_hidden == LAST_HIDDEN_SIZE:
+            plt.savefig('figures/shallow_exp_all.png')
     else:
         plt.savefig('figures/shallow_exp%d.png' % num_hidden)
 
