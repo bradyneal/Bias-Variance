@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 from NNTrainer import NNTrainer
 from models import Linear, ShallowNet, MinDeepNet, ExampleNet
 from infmetrics import get_pairwise_hamming_diffs, get_pairwise_disagreements, \
@@ -25,16 +25,19 @@ SAVED_BITMAP_DIR =  os.path.join(SAVED_MODEL_INF_DIR, 'bitmaps')
 SAVED_WEIGHTS_DIR =  os.path.join(SAVED_MODEL_INF_DIR, 'weights')
 
 
-
-def run_nn_exp(num_hidden, retrain=False):
-    bitmaps, weights = get_nn_information(num_hidden, retrain=retrain)
-    all_ham_dists, _ = get_pairwise_hamming_dists(bitmaps)
+def run_nn_exp(num_hidden, retrain=False, retest=False):
+    print()
+    print('Running experiment with %d hidden units' % num_hidden)
+    bitmaps, weights = get_nn_information(num_hidden, retrain=retrain, retest=retest)
+    bitmap_accs = map(torch.mean, bitmaps)
+    avg_acc = sum(bitmap_accs) / len(bitmaps)
+    print('Average accuracy over %d trials:' % len(bitmaps), avg_acc)
+    all_ham_dists, _ = get_pairwise_hamming_diffs(bitmaps, avg_acc)
     all_disagreements, _ = get_pairwise_disagreements(bitmaps)
     all_weight_dists, _ = get_pairwise_weight_dists_normalized(weights)
     print_summary(all_ham_dists, '%s RESULT for %d hidden units' % ('hamming', num_hidden))
     print_summary(all_disagreements, '%s RESULT for %d hidden units' % ('disagreement', num_hidden))
     print_summary(all_weight_dists, '%s RESULT for %d hidden units' % ('weights', num_hidden))
-    print()
     plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists, same_figure=False)
     plot_results(num_hidden, all_ham_dists, all_disagreements, all_weight_dists, same_figure=True)
     # return all_ham_dists, all_disagreements, all_weight_dists
@@ -73,12 +76,11 @@ def get_nn_information(num_hidden, retrain=False, retest=False):
             load_models = False
             
     if load_model_inf:
-        print('Saved model information found! Loading it...')
+        print('Saved model information found! Loading it from SLURM id %s...' % saved_slurm_id)
     elif load_models:
-        print('Saved models found! Loading them...')
+        print('Saved models found! Loading them from SLURM id %s...' % saved_slurm_id)
     else:
         print('No saved models found or purposefully retraining. Running training...')
-        exit('Not tryna retrain right now, mate')
             
     bitmaps = []
     weights = []
