@@ -95,7 +95,7 @@ class NNTrainer:
         self.model.eval()
         test_loss = 0
         num_correct = 0
-        correct = torch.ByteTensor(0, 1)
+        correct = torch.FloatTensor(0, 1)
         for data, target in self.test_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
@@ -103,7 +103,7 @@ class NNTrainer:
             output = self.model(data)
             test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred)).cpu()
+            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)
             num_correct += batch_correct.sum()
 
