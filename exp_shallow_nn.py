@@ -138,6 +138,7 @@ def plot_results(num_hidden, all_ham_dists, all_pos_disagreements, all_neg_disag
     WEIGHT_DIST_LABEL = 'Normalized weight distance'
     DISAGREEMENT_POS_LABEL = 'Disagreement on positive examples'
     DISAGREEMENT_NEG_LABEL = 'Disagreement on negative examples'
+    PLOT_LABEL = '%d hidden units' % num_hidden
     
     num_plots_per_exp = 3
     if same_figure:
@@ -146,25 +147,26 @@ def plot_results(num_hidden, all_ham_dists, all_pos_disagreements, all_neg_disag
         plt.figure(figsize=((DEFAULT_WIDTH + 1) * num_plots_per_exp, DEFAULT_HEIGHT))
     
     plt.subplot(1, num_plots_per_exp, 1)
-    plt.plot(all_weight_dists, all_ham_dists, 'o')
+    plt.plot(all_weight_dists, all_ham_dists, 'o', label=PLOT_LABEL)
     plt.title('Hamming distance vs. Weight distance')
     plt.xlabel(WEIGHT_DIST_LABEL)
     plt.ylabel(HAMM_DIST_LABEL)
     
     plt.subplot(1, num_plots_per_exp, 2)
-    plt.plot(all_weight_dists, all_pos_disagreements, 'o')
+    plt.plot(all_weight_dists, all_pos_disagreements, 'o', label=PLOT_LABEL)
     plt.title('Disagreement on learned information vs. Weight distance')
     plt.xlabel(WEIGHT_DIST_LABEL)
     plt.ylabel(DISAGREEMENT_POS_LABEL)
     
     plt.subplot(1, num_plots_per_exp, 3)
-    plt.plot(all_weight_dists, all_neg_disagreements, 'o')
+    plt.plot(all_weight_dists, all_neg_disagreements, 'o', label=PLOT_LABEL)
     plt.title('Disagreement on NOT learned information vs. Weight distance')
     plt.xlabel(WEIGHT_DIST_LABEL)
     plt.ylabel(DISAGREEMENT_NEG_LABEL)
     
     if same_figure:
         if num_hidden == LAST_HIDDEN_SIZE:
+            plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
             plt.savefig('figures/shallow_exp_all.png')
     else:
         plt.savefig('figures/shallow_exp%d.png' % num_hidden)
