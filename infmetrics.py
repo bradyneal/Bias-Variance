@@ -6,6 +6,9 @@ import torch
 from functools import partial
 from math import sqrt
 
+MISCLASS_LABEL = 0
+CORRECT_CLASS_LABEL = 1 - MISCLASS_LABEL
+
 
 def get_pairwise_dists(seqs, metric):
     """
@@ -46,9 +49,24 @@ def get_pairwise_hamming_diffs(seqs, p):
     return get_pairwise_dists(seqs, partial(hamming_diff, p=p))
 
 
-def get_pairwise_agreements(seqs):
-    """"Same as above, but using the 'agreement' metric defined below"""
-    return get_pairwise_dists(seqs, get_agreement)
+def get_pairwise_pos_agreements(seqs):
+    """"Same as above, but using the 'positive agreement' metric defined below"""
+    return get_pairwise_dists(seqs, get_pos_agreement)
+
+
+def get_pairwise_neg_agreements(seqs):
+    """"Same as above, but using the 'negative agreement' metric defined below"""
+    return get_pairwise_dists(seqs, get_neg_agreement)
+
+
+def get_pairwise_pos_disagreements(seqs):
+    """"Same as above, but using the 'positive disagreement' metric defined below"""
+    return get_pairwise_dists(seqs, get_pos_disagreement)
+
+
+def get_pairwise_neg_disagreements(seqs):
+    """"Same as above, but using the 'negative disagreement' metric defined below"""
+    return get_pairwise_dists(seqs, get_neg_disagreement)
 
 
 def get_pairwise_disagreements(seqs):
@@ -66,26 +84,52 @@ def get_pairwise_weight_dists_normalized(seqs):
     return get_pairwise_dists(seqs, get_weight_dist_normalized)
 
 
-def get_agreement(seq1, seq2, mis_label=0):
+def get_agreement(seq1, seq2, label):
     """
     Return the symmetric 'agreement' between two sequences where
-    mis_label is the label that indicates an example was misclassified.
+    we are conditioning only on the labels with 'label'.
     """
-    mis1 = set(np.nonzero(seq1 == mis_label)[:, 0])
-    mis2 = set(np.nonzero(seq2 == mis_label)[:, 0])
-    num_mis_both = len(mis1.intersection(mis2))
-    agree1 = num_mis_both / len(mis1)
-    agree2 = num_mis_both / len(mis2)
+    cond1 = set(np.nonzero(seq1 == label)[:, 0])
+    cond2 = set(np.nonzero(seq2 == label)[:, 0])
+    num_cond_both = len(cond1.intersection(cond2))
+    agree1 = num_cond_both / len(cond1)
+    agree2 = num_cond_both / len(cond2)
     sym_agreement = (agree1 + agree2) / 2
     return sym_agreement
 
 
-def get_disagreement(seq1, seq2, mis_label=0):
+def get_pos_agreement(seq1, seq2, cor_label=CORRECT_CLASS_LABEL):
     """
-    Return the symmetric 'disagreement' between two sequences where
+    Return the symmetric 'agreement' between two sequences where
+    cor_label is the label that indicates an example was correctly classified.
+    """
+    return get_agreement(seq1, seq2, label=cor_label)
+
+
+def get_neg_agreement(seq1, seq2, mis_label=MISCLASS_LABEL):
+    """
+    Return the symmetric 'agreement' between two sequences where
     mis_label is the label that indicates an example was misclassified.
     """
-    return 1 - get_agreement(seq1, seq2, mis_label=0)
+    return get_agreement(seq1, seq2, label=mis_label)
+
+
+def get_pos_disagreement(seq1, seq2, cor_label=CORRECT_CLASS_LABEL):
+    """
+    Complement of positive agreement above.
+    Note: this is the same as if the symmetric part were to be done between
+    disagreements, rather than between agreements.
+    """
+    return 1 - get_pos_agreement(seq1, seq2, cor_label=cor_label)
+
+
+def get_neg_disagreement(seq1, seq2, mis_label=MISCLASS_LABEL):
+    """
+    Complement of negative agreement above.
+    Note: this is the same as if the symmetric part were to be done between
+    disagreements, rather than between agreements.
+    """
+    return 1 - get_neg_agreement(seq1, seq2, mis_label=mis_label)
 
 
 def get_weight_dist(w1, w2, p=2):
