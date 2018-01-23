@@ -78,6 +78,18 @@ class NNTrainer:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
+                
+    def evaluate_loss(self):
+        """Evaluate the loss at the current setting of weights"""
+        total_loss = 0
+        for batch_idx, (data, target) in enumerate(self.train_loader):
+            if self.cuda:
+                data, target = data.cuda(), target.cuda()
+            data, target = Variable(data), Variable(target)
+            output = self.model(data)
+            batch_loss = F.nll_loss(output, target)
+            total_loss += batch_loss
+        return total_loss
 
     def train(self, epochs=None, test=False):
         if test:
