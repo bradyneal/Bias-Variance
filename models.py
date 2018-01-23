@@ -2,9 +2,16 @@ from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from copy import deepcopy
 
 MNIST_D = 784   # 28 x 28
 MNIST_K = 10
+
+def get_inter_model(model1, model2, theta):
+    inter_model = deepcopy(model1)
+    for p1, p2, inter_p in zip(model1.parameters(), model2.parameters(), inter_model.parameters()):
+        inter_p.data = theta * p1.data + (1 - theta) * p2.data
+    return inter_model
 
 class nn_custom_super(nn.Module):
     
