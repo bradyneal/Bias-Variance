@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import print_function, division
 from NNTrainer import NNTrainer
 import os
 import torch
@@ -14,6 +14,8 @@ NUM_PAIRS = 25
 HIDDEN_SIZES = [5, 10, 15, 25, 50, 100, 250, 500]
 MODELS_DIR = '/data/milatmp1/nealbray/information-paths/saved/models'
 LINEAR_FIG_DIR = '/data/milatmp1/nealbray/information-paths/figures'
+BITMAP_DIR = '/data/milatmp1/nealbray/information-paths/saved/train_bitmaps'
+SLURM_ID = 116568
 
 def hidden_size_to_color(num_hidden):
     return 'C' + str(HIDDEN_SIZES.index(num_hidden))
@@ -55,7 +57,7 @@ def load_model(num_hidden, run, slurm_id):
 
 
 def get_models(num_hidden):
-    slurm_id = 116568
+    slurm_id = SLURM_ID
     models = []
     for i in range(20):
         models.append(load_model(num_hidden, i, slurm_id))
@@ -76,8 +78,25 @@ def plot_all_linearizations():
     filename = os.path.join(LINEAR_FIG_DIR, 'linear_all.png')
     plt.savefig(filename)
     
+    
+def save_train_bitmaps():
+    for num_hidden in HIDDEN_SIZES:
+        print('num_hidden:', num_hidden)
+        models = get_models(num_hidden)
+        for i, model in enumerate(models):
+            tester = NNTrainer(model)
+            acc, _, bitmap = tester.evaluate_training()
+            print('%dth train acc:' % i, acc)
+            filename = os.path.join(BITMAP_DIR,
+                                    'shallow%d_run%d_job%s.pt' % (num_hidden, i, SLURM_ID))
+            torch.save(bitmap, filename)
+    # plt.savefig(filename)
+    
         
 if __name__ == '__main__':
     # for num_hidden in HIDDEN_SIZES:
     #     plot_linearizations(num_hidden, same_plot=False)
-    plot_all_linearizations()
+    
+    # plot_all_linearizations()
+    
+    save_train_bitmaps()
