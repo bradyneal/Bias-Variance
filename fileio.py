@@ -19,15 +19,42 @@ import torch
 OUTPUT_DIR = '/data/milatmp1/nealbray/information-paths/'
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODELS_DIR = os.path.join(SAVED_DIR, 'models')
-MODEL_INF_DIR =  os.path.join(SAVED_DIR, 'model_inf')
-BITMAP_DIR =  os.path.join(MODEL_INF_DIR, 'bitmaps')
+TRAIN_BITMAP_DIR =  os.path.join(SAVED_DIR, 'train_bitmaps')
+TEST_BITMAP_DIR =  os.path.join(SAVED_DIR, 'test_bitmaps')
 WEIGHT_DIR =  os.path.join(MODEL_INF_DIR, 'weights')
 
 CURRENT_SLURM_ID = os.environ["SLURM_JOB_ID"]
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
-def load_torch(filename, to_cpu=False):
+TO_CPU_DEFAULT = False
+
+def save_model(model, num_hidden, i , slurm_id):
+    return torch.save(model, get_model_path(num_hidden, i , slurm_id))
+
+def save_weights(weights, num_hidden, i , slurm_id):
+    return torch.save(weights, get_weight_path(num_hidden, i , slurm_id))
+
+def save_train_bitmap(bitmap, num_hidden, i , slurm_id):
+    return torch.save(bitmap, get_train_bitmap_path(num_hidden, i , slurm_id))
+    
+def save_test_bitmap(bitmap, num_hidden, i , slurm_id):
+    return torch.save(bitmap, get_test_bitmap_path(num_hidden, i , slurm_id))
+
+
+def load_model(num_hidden, i , slurm_id):
+    return torch.load(get_model_path(num_hidden, i , slurm_id))
+
+def load_weights(num_hidden, i , slurm_id):
+    return torch.load(get_weight_path(num_hidden, i , slurm_id))
+
+def load_train_bitmap(num_hidden, i , slurm_id):
+    return torch.load(get_train_bitmap_path(num_hidden, i , slurm_id))
+    
+def load_test_bitmap(num_hidden, i , slurm_id):
+    return torch.load(get_test_bitmap_path(num_hidden, i , slurm_id))
+
+def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
     """Load torch object, reverting to loading to CPU if loading error"""
     # Don't even try to load normally if you know it's going to CPU
     if to_cpu:
@@ -99,14 +126,14 @@ def get_path(directory, num_hidden, i , slurm_id):
     """Get path of a file in a specific directory"""
     return os.path.join(directory, get_filename(num_hidden, i, slurm_id))
 
-
 """
 Functions that return the path for a specific directory
 Args: num_hidden, i, slurm_id
 """
-get_weight_path = partial(get_path, directory=WEIGHT_DIR)
-get_bitmap_path = partial(get_path, directory=BITMAP_DIR)
 get_model_path = partial(get_path, directory=MODEL_DIR)
+get_weight_path = partial(get_path, directory=WEIGHT_DIR)
+get_train_bitmap_path = partial(get_path, directory=TRAIN_BITMAP_DIR)
+get_test_bitmap_path = partial(get_path, directory=TEST_BITMAP_DIR)
 
 
 def get_filename(num_hidden, i, slurm_id):
