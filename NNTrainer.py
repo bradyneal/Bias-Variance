@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 import argparse
 import torch
 import torch.nn as nn
@@ -79,17 +79,32 @@ class NNTrainer:
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
                 
-    def evaluate_loss(self):
-        """Evaluate the loss at the current setting of weights"""
+    def evaluate_training(self):
+        """Evaluate the training loss at the current setting of weights"""
+        num_train = len(self.train_loader.dataset)
         total_loss = 0
+        num_correct = 0
+        correct = torch.FloatTensor(0, 1)
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             output = self.model(data)
+            
+            # Loss
             batch_loss = F.nll_loss(output, target)
             total_loss += batch_loss
-        return total_loss
+            
+            # Predictions and accuracy accumulation
+            pred = output.data.max(1, keepdim=True)[1]
+            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
+            num_correct += batch_correct.sum()
+            correct = torch.cat([correct, batch_correct], 0)
+        
+        acc = num_correct / num_train
+        avg_loss = total_loss / num_train
+        return acc, avg_loss, correct
+
 
     def train(self, epochs=None, test=False):
         if test:
