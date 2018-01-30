@@ -1,5 +1,4 @@
 from __future__ import print_function, division
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,7 +7,7 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 
 
-class NNTrainer:
+class DataModelComp:
     """
     Class for training neural networks and outputing various measures of the
     information the weights contain.
@@ -78,8 +77,24 @@ class NNTrainer:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
-                
-    def evaluate_training(self):
+ 
+    def train(self, epochs=None, eval_path=False):
+        if eval_path:
+            train_seq = []
+            test_seq = []
+        if epochs is None:
+            epochs = self.epochs
+        for epoch in range(1, epochs + 1):
+            self.train_step(epoch)
+            if eval_path:
+                 _, _, train_bitmap = self.evaluate_train()
+                 _, _, test_bitmap = self.evaluate_test()
+                 train_seq.append(train_bitmap)
+                 test_seq.append(test_bitmap)
+        if eval_path:
+            return train_seq, test_seq
+             
+    def evaluate_train(self):
         """Evaluate the training loss at the current setting of weights"""
         num_train = len(self.train_loader.dataset)
         total_loss = 0
@@ -104,23 +119,11 @@ class NNTrainer:
         acc = num_correct / num_train
         avg_loss = total_loss / num_train
         return acc, avg_loss, correct
-
-
-    def train(self, epochs=None, test=False):
-        if test:
-            test_seq = []
-        if epochs is None:
-            epochs = self.epochs
-        for epoch in range(1, epochs + 1):
-            self.train_step(epoch)
-            if test:
-                test_seq.append(self.test())
-        if test:
-            return test_seq
-                    
-    def test(self, return_correct=True):
+               
+    def evaluate_test(self):
         self.model.eval()
-        test_loss = 0
+        num_test = len(self.test_loader.dataset)
+        total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
         for data, target in self.test_loader:
@@ -128,15 +131,15 @@ class NNTrainer:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
             output = self.model(data)
-            test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
+            total_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)
             num_correct += batch_correct.sum()
 
-        test_loss /= len(self.test_loader.dataset)
+        avg_loss = total_loss / num_test
+        acc = num_correct / num_test
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, num_correct, len(self.test_loader.dataset),
-            100. * num_correct / len(self.test_loader.dataset)))
-        if return_correct:
-            return correct
+            avg_loss, num_correct, num_test, 100. * acc))
+        
+        return acc, avg_loss, correct
