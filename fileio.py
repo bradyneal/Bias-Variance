@@ -1,7 +1,6 @@
 from __future__ import print_function, division
 import os
 import re
-from functools import partial
 import torch
 
 
@@ -18,12 +17,12 @@ import torch
 
 OUTPUT_DIR = '/data/milatmp1/nealbray/information-paths/'
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
-MODELS_DIR = os.path.join(SAVED_DIR, 'models')
+MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 TRAIN_BITMAP_DIR =  os.path.join(SAVED_DIR, 'train_bitmaps')
 TEST_BITMAP_DIR =  os.path.join(SAVED_DIR, 'test_bitmaps')
-WEIGHT_DIR =  os.path.join(MODEL_INF_DIR, 'weights')
+WEIGHT_DIR =  os.path.join(SAVED_DIR, 'weights')
 
-CURRENT_SLURM_ID = os.environ["SLURM_JOB_ID"]
+# CURRENT_SLURM_ID = os.environ["SLURM_JOB_ID"]
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
@@ -43,16 +42,16 @@ def save_test_bitmap(bitmap, num_hidden, i , slurm_id):
 
 
 def load_model(num_hidden, i , slurm_id):
-    return torch.load(get_model_path(num_hidden, i , slurm_id))
+    return load_torch(get_model_path(num_hidden, i , slurm_id))
 
 def load_weights(num_hidden, i , slurm_id):
-    return torch.load(get_weight_path(num_hidden, i , slurm_id))
+    return load_torch(get_weight_path(num_hidden, i , slurm_id))
 
 def load_train_bitmap(num_hidden, i , slurm_id):
-    return torch.load(get_train_bitmap_path(num_hidden, i , slurm_id))
+    return load_torch(get_train_bitmap_path(num_hidden, i , slurm_id))
     
 def load_test_bitmap(num_hidden, i , slurm_id):
-    return torch.load(get_test_bitmap_path(num_hidden, i , slurm_id))
+    return load_torch(get_test_bitmap_path(num_hidden, i , slurm_id))
 
 def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
     """Load torch object, reverting to loading to CPU if loading error"""
@@ -130,10 +129,17 @@ def get_path(directory, num_hidden, i , slurm_id):
 Functions that return the path for a specific directory
 Args: num_hidden, i, slurm_id
 """
-get_model_path = partial(get_path, directory=MODEL_DIR)
-get_weight_path = partial(get_path, directory=WEIGHT_DIR)
-get_train_bitmap_path = partial(get_path, directory=TRAIN_BITMAP_DIR)
-get_test_bitmap_path = partial(get_path, directory=TEST_BITMAP_DIR)
+def get_model_path(num_hidden, i , slurm_id):
+    return get_path(MODEL_DIR, num_hidden, i , slurm_id)
+
+def get_weight_path(num_hidden, i , slurm_id):
+    return get_path(WEIGHT_DIR, num_hidden, i , slurm_id)
+
+def get_train_bitmap_path(num_hidden, i , slurm_id):
+    return get_path(TRAIN_BITMAP_DIR, num_hidden, i , slurm_id)
+
+def get_test_bitmap_path(num_hidden, i , slurm_id):
+    return get_path(TEST_BITMAP_DIR, num_hidden, i , slurm_id)
 
 
 def get_filename(num_hidden, i, slurm_id):
