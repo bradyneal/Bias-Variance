@@ -9,8 +9,9 @@ from torch.autograd import Variable
 
 class DataModelComp:
     """
-    Class for training neural networks and outputing various measures of the
-    information the weights contain.
+    Class that is the abstraction of a dataset and model. It holds the methods
+    that would require both of these, such as training of the model, evaluation
+    of the model on the dataset, etc.
     """
 
     def __init__(self, model, batch_size=64, test_batch_size=10000, epochs=10,
