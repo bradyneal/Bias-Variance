@@ -1,18 +1,11 @@
+"""
+Module for the saving and loading of different data
+"""
+
 from __future__ import print_function, division
 import os
 import re
 import torch
-
-
-
-# from NNTrainer import NNTrainer
-# from models import Linear, ShallowNet, MinDeepNet, ExampleNet
-# from infmetrics import get_pairwise_hamming_diffs, get_pairwise_weight_dists_normalized, \
-#     get_pairwise_pos_disagreements, get_pairwise_neg_disagreements       
-# 
-# import matplotlib as mpl
-# mpl.use('Agg')
-# import matplotlib.pyplot as plt
 
 
 OUTPUT_DIR = '/data/milatmp1/nealbray/information-paths/'
