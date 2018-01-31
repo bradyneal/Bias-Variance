@@ -17,13 +17,13 @@ SLURM_ID = 116568
 
 def eval_model_and_save(data_model_comp, num_hidden, i, slurm_id):
     """Evaluate and save model train and test bitmaps."""
-    train_acc, _, train_bitmap = data_model_comp.evaluate_train()
+    _, _, train_bitmap = data_model_comp.evaluate_train()
     save_train_bitmap(train_bitmap, num_hidden, i, slurm_id)
-    test_bitmap = data_model_comp.evaluate_test()
+    _, _, test_bitmap = data_model_comp.evaluate_test()
     save_test_bitmap(test_bitmap, num_hidden, i, slurm_id)
     
 
-def eval_saved_models_and_save(hidden_sizes, num_runs, slurm_id):
+def eval_saved_models_and_save(hidden_sizes, num_runs, slurm_id, start_i=0):
     """
     Load all saved models according to hidden_sizes and num_runs, evaluate them
     on the training and test set, and save both bitmaps.
@@ -32,7 +32,7 @@ def eval_saved_models_and_save(hidden_sizes, num_runs, slurm_id):
         hidden_sizes = [hidden_sizes]
     for num_hidden in hidden_sizes:
         print('num_hidden:', num_hidden)
-        for i in range(num_runs):
+        for i in range(start_i, num_runs):
             print('%d of %d' % (i + 1, num_runs))
             model = load_model(num_hidden, i, slurm_id)
             data_model_comp = DataModelComp(model)
@@ -51,7 +51,7 @@ def train_shallow_nn_and_save(num_hidden, i, slurm_id):
     eval_model_and_save(data_model_comp, num_hidden, i, slurm_id)
 
 
-def train_shallow_nns_and_save(hidden_sizes, num_runs, start_i=0, slurm_id=None):
+def train_shallow_nns_and_save(hidden_sizes, num_runs, slurm_id=None, start_i=0):
     """
     Train many shallow nns, evaluate them, and save everything.
     """
@@ -65,4 +65,4 @@ def train_shallow_nns_and_save(hidden_sizes, num_runs, start_i=0, slurm_id=None)
     
 
 if __name__ == '__main__':
-    train_shallow_nns_and_save([10], num_runs=1000, start_i=20, slurm_id=SLURM_ID)
+    eval_saved_models_and_save([10, 100], num_runs=1000, start_i=20, slurm_id=SLURM_ID)
