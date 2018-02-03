@@ -14,13 +14,14 @@ MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 TRAIN_BITMAP_DIR =  os.path.join(SAVED_DIR, 'train_bitmaps')
 TEST_BITMAP_DIR =  os.path.join(SAVED_DIR, 'test_bitmaps')
 WEIGHT_DIR =  os.path.join(SAVED_DIR, 'weights')
+PAIRWISE_DISTS_DIR =  os.path.join(SAVED_DIR, 'pairwise_dists')
 
-# CURRENT_SLURM_ID = os.environ["SLURM_JOB_ID"]
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
 TO_CPU_DEFAULT = False
 
+"""Specific saving functions"""
 def save_model(model, num_hidden, i , slurm_id):
     return torch.save(model, get_model_path(num_hidden, i , slurm_id))
 
@@ -33,7 +34,10 @@ def save_train_bitmap(bitmap, num_hidden, i , slurm_id):
 def save_test_bitmap(bitmap, num_hidden, i , slurm_id):
     return torch.save(bitmap, get_test_bitmap_path(num_hidden, i , slurm_id))
 
+def save_pairwise_dists(pairwise_dists, num_hidden, num_runs, modifier):
+    return torch.save(pairwise_dists, get_pairwise_dists_path(num_hidden, num_runs, modifier))
 
+"""Specific loading functions"""
 def load_model(num_hidden, i , slurm_id):
     return load_torch(get_model_path(num_hidden, i , slurm_id))
 
@@ -45,6 +49,10 @@ def load_train_bitmap(num_hidden, i , slurm_id):
     
 def load_test_bitmap(num_hidden, i , slurm_id):
     return load_torch(get_test_bitmap_path(num_hidden, i , slurm_id))
+
+def load_pairwise_dists(num_hidden, num_runs, modifier):
+    return load_torch(get_pairwise_dists_path(num_hidden, num_runs, modifier))
+
 
 def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
     """Load torch object, reverting to loading to CPU if loading error"""
@@ -114,13 +122,8 @@ def load_model_information():
         weights.append(weight_vec)
 
 
-def get_path(directory, num_hidden, i , slurm_id):
-    """Get path of a file in a specific directory"""
-    return os.path.join(directory, get_filename(num_hidden, i, slurm_id))
-
 """
 Functions that return the path for a specific directory
-Args: num_hidden, i, slurm_id
 """
 def get_model_path(num_hidden, i , slurm_id):
     return get_path(MODEL_DIR, num_hidden, i , slurm_id)
@@ -133,6 +136,15 @@ def get_train_bitmap_path(num_hidden, i , slurm_id):
 
 def get_test_bitmap_path(num_hidden, i , slurm_id):
     return get_path(TEST_BITMAP_DIR, num_hidden, i , slurm_id)
+
+def get_pairwise_dists_path(num_hidden, num_runs, modifier):
+    return os.path.join(PAIRWISE_DISTS_DIR,
+                        'shallow{}_runs{}_{}_dists.pt'.format(num_hidden, num_runs, modifier))
+
+
+def get_path(directory, num_hidden, i , slurm_id):
+    """Get path of a file in a specific directory"""
+    return os.path.join(directory, get_filename(num_hidden, i, slurm_id))
 
 
 def get_filename(num_hidden, i, slurm_id):
