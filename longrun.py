@@ -8,7 +8,7 @@ import torch
 import os
 import re
 from itertools import combinations
-from fileio import load_model, save_model, save_train_bitmap, save_test_bitmap
+from fileio import load_model, save_model, save_weights, save_train_bitmap, save_test_bitmap
 from models import ShallowNet
 
 NUM_I = 1000
