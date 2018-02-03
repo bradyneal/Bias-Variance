@@ -48,6 +48,7 @@ def train_shallow_nn_and_save(num_hidden, i, slurm_id):
     data_model_comp = DataModelComp(shallow_net, lr=0.1, momentum=0.5, epochs=10)
     data_model_comp.train()
     save_model(shallow_net, num_hidden, i, slurm_id)
+    save_weights(shallow_net.get_params(), num_hidden, i, slurm_id)
     eval_model_and_save(data_model_comp, num_hidden, i, slurm_id)
 
 
