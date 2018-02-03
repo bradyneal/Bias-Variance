@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import print_function, division
 from itertools import combinations
 from scipy.spatial.distance import hamming
 import numpy as np
@@ -145,10 +145,11 @@ def get_weight_dist_normalized(w1, w2, p=2):
     return get_weight_dist(w1, w2, p=p) / sqrt(len(w1))
 
 
-def expected_hamming(p):
+def expected_hamming(p1, p2=None):
     """
-    Return the expected hamming distance between two random vectors X and Y,
-    under the following assumptions:
+    Return the expected hamming distance between two random vectors X and Y
+    where X_i ~ Bernoulli(p1) and Y_i ~ Bernoulli(p2) (defaults to p1 if p2
+    isn't specified), under the following assumptions:
     1. P(X_i = Y_i) = P(X_j = Y_j). In words, this means (X_i, Y_i) and
     (X_j, Y_j) are identically jointly distributed. In other words, all data
     points are equally easy (or hard) to learn (this is an empirically false
@@ -157,12 +158,23 @@ def expected_hamming(p):
     words, the predictions between any two learned models on the same test
     example are independent (obviously false assumption).
     """
-    return 2 * p * (1 - p)
+    if p2 is None:
+        return 2 * p1 * (1 - p1)
+    else:
+        return p1 + p2 - 2 * p1 * p2
 
 
-def hamming_diff(seq1, seq2, p):
+def hamming_diff(seq1, seq2, p=None):
     """
     Return the difference between the hamming distance of the two sequences and
     the expected hamming distance between two random vectors.
+    If p is specified, use it as the common p for both vector. Otherwise,
+    calculate each vector's respective p and use those.
     """
-    return hamming(seq1, seq2) - expected_hamming(p)
+    if p is None:
+        p1 = torch.mean(seq1)
+        p2 = torch.mean(seq2)
+        expected = expected_hamming(p1, p2)
+    else:
+        expected = expected_hamming(p)
+    return hamming(seq1, seq2) - expected
