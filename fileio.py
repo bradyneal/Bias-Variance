@@ -139,7 +139,7 @@ def get_test_bitmap_path(num_hidden, i , slurm_id):
 
 def get_pairwise_dists_path(num_hidden, num_runs, modifier):
     return os.path.join(PAIRWISE_DISTS_DIR,
-                        'shallow{}_runs{}_{}_dists.pt'.format(num_hidden, num_runs, modifier))
+                        'shallow{}_runs{}_{}.pt'.format(num_hidden, num_runs, modifier))
 
 
 def get_path(directory, num_hidden, i , slurm_id):
@@ -152,3 +152,12 @@ def get_filename(num_hidden, i, slurm_id):
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
     return COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+
+def get_train_test_modifiers(modifier):
+    """Append the modifier to 'train' and 'test'"""
+    modifier_train = 'train'
+    modifier_test = 'test'
+    if modifier is not None:
+        modifier_train = modifier_train + '_' + modifier
+        modifier_test = modifier_test + '_' + modifier
+    return modifier_train, modifier_test
