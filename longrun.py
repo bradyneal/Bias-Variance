@@ -8,7 +8,7 @@ import torch
 import os
 import re
 from itertools import combinations
-from fileio import load_model, load_train_bitmap, load_test_bitmap, \
+from fileio import load_model, load_train_bitmap, load_test_bitmap, get_train_test_modifiers, \
     save_model, save_weights, save_train_bitmap, save_test_bitmap, save_pairwise_dists
 from models import ShallowNet
 from infmetrics import hamming_diff
@@ -75,11 +75,7 @@ def compute_pairwise_metrics_and_save(hidden_sizes, num_runs, slurm_id, metric, 
             if count % print_freq == 0:    
                 print('{}% of the way done'.format(count / num_pairs * 100))
         
-        modifier_train = 'train'
-        modifier_test = 'test'
-        if modifier is not None:
-            modifier_train = modifier_train + '_' + modifier
-            modifier_test = modifier_test + '_' + modifier
+        modifier_train, modifier_test = get_train_test_modifiers(modifier)
         save_pairwise_dists(train_dists, num_hidden, num_runs, modifier_train)
         save_pairwise_dists(test_dists, num_hidden, num_runs, modifier_test)            
 
