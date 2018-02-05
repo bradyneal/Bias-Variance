@@ -11,7 +11,7 @@ from itertools import combinations
 from fileio import load_model, load_train_bitmap, load_test_bitmap, get_train_test_modifiers, \
     save_model, save_weights, save_train_bitmap, save_test_bitmap, save_pairwise_dists
 from models import ShallowNet
-from infmetrics import hamming_diff
+from infmetrics import hamming, hamming_diff
 
 SLURM_ID = 116568
 
@@ -45,39 +45,56 @@ def train_shallow_nns_and_save(hidden_sizes, num_runs, slurm_id=None, start_i=0)
             train_shallow_nn_and_save(num_hidden, i, slurm_id)
 
     
-def compute_pairwise_metrics_and_save(hidden_sizes, num_runs, slurm_id, metric, modifier=None):
+def compute_pairwise_metrics_and_save(hidden_sizes, num_runs, slurm_id, metrics, modifiers=None):
     """
     Compute the pairwise distance between all runs of a neural network of a
-    fixed size, for all specified sizes, using the given metric, and saving
-    to the filename according to the given modifier.
+    fixed size, for all specified sizes, for all given metrics, and saving
+    to the filename according to the given modifiers.
     """
     if not isinstance(hidden_sizes, list):
         hidden_sizes = [hidden_sizes]
+    if not isinstance(metrics, list):
+        metrics = [metrics]
+    if modifiers is not None and not isinstance(modifiers, list):
+        modifiers = [modifiers]
+        
     for num_hidden in hidden_sizes:
         print('\nnum_hidden:', num_hidden)
         num_pairs = num_runs * (num_runs - 1) / 2
         print_freq = max(round(num_pairs / 20), 1)
-        train_dists = []
-        test_dists = []
+        num_metrics = len(metrics)
+        train_dists = [[] for _ in metrics]
+        test_dists = [[] for _ in metrics]
         count = 0
+        
+        # Load all bitmaps
         for i, j in combinations(range(num_runs), 2):
             train_bitmap1 = load_train_bitmap(num_hidden, i, slurm_id)
             train_bitmap2 = load_train_bitmap(num_hidden, j, slurm_id)
-            train_dist = metric(train_bitmap1, train_bitmap2)
-            train_dists.append(train_dist)
-
             test_bitmap1 = load_test_bitmap(num_hidden, i, slurm_id)
-            test_bitmap2 = load_test_bitmap(num_hidden, j, slurm_id) 
-            test_dist = metric(test_bitmap1, test_bitmap2)
-            test_dists.append(test_dist)
+            test_bitmap2 = load_test_bitmap(num_hidden, j, slurm_id)
+            
+            # Compute pairwise metrics of bitmaps
+            for i, metric in enumerate(metrics):
+                train_dist = metric(train_bitmap1, train_bitmap2)
+                train_dists[i].append(train_dist)
+     
+                test_dist = metric(test_bitmap1, test_bitmap2)
+                test_dists[i].append(test_dist)
 
             count += 1
             if count % print_freq == 0:    
                 print('{}% of the way done'.format(count / num_pairs * 100))
         
-        modifier_train, modifier_test = get_train_test_modifiers(modifier)
-        save_pairwise_dists(train_dists, num_hidden, num_runs, modifier_train)
-        save_pairwise_dists(test_dists, num_hidden, num_runs, modifier_test)            
+        for i in range(len(metrics)):
+            if i >= len(modifiers):
+                modifier = 'metric' + str(i)
+            else:
+                modifier = modifiers[i]
+            
+            modifier_train, modifier_test = get_train_test_modifiers(modifier)
+            save_pairwise_dists(train_dists[i], num_hidden, num_runs, modifier_train)
+            save_pairwise_dists(test_dists[i], num_hidden, num_runs, modifier_test)            
 
 
 def eval_model_and_save(data_model_comp, num_hidden, i, slurm_id):
@@ -102,5 +119,5 @@ def train_shallow_nn_and_save(num_hidden, i, slurm_id):
 
 
 if __name__ == '__main__':
-    compute_pairwise_metrics_and_save([5, 10, 15, 25, 50, 100, 250, 500], 20, SLURM_ID, hamming_diff, 'hammdiffp2')
+    compute_pairwise_metrics_and_save([5, 10, 15, 25, 50, 100, 250, 500], 20, SLURM_ID, [hamming, hamming_diff], ['hamm', 'hammdiffp2'])
     # eval_saved_models_and_save([10, 100], num_runs=1000, start_i=20, slurm_id=SLURM_ID)
