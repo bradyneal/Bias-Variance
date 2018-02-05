@@ -164,17 +164,37 @@ def expected_hamming(p1, p2=None):
         return p1 + p2 - 2 * p1 * p2
 
 
-def hamming_diff(seq1, seq2, p=None):
+def hamming_diff(seq1, seq2, p1=None, p2=None):
     """
     Return the difference between the hamming distance of the two sequences and
     the expected hamming distance between two random vectors.
     If p is specified, use it as the common p for both vector. Otherwise,
     calculate each vector's respective p and use those.
     """
-    if p is None:
+    if p1 is not None and p2 is not None:
+        expected = expected_hamming(p1, p2)
+    elif p1 is not None:
+        expected = expected_hamming(p1)
+    elif p1 is None and p2 is None:
         p1 = torch.mean(seq1)
         p2 = torch.mean(seq2)
         expected = expected_hamming(p1, p2)
     else:
-        expected = expected_hamming(p)
+        raise ValueError('Invalid arguments: p1 is None and p2 is not None')
     return hamming(seq1, seq2) - expected
+    
+
+def hamming_std(n, p1, p2=None):
+    """
+    Return the standard deviation under the following assumptions:
+    Same 1 and 2 as for the expectation.
+    3. P(X_i = Y_i) and P(X_j = Y_j) are independent. Given assumptions 1 and 2,
+    this amounts to adding the assumption that the ith and jth predictions from
+    the same classifier are the independent (obviously false assumption).
+    """
+    if p2 is None:
+        p = p1
+        return sqrt((2*p - 6*p**2 + 8*p**3 - 4*p**4) / n)
+    else:
+        numer = p1 + p2 - 4*p1*p2 - p1**2 - p2**2 + 4*(p2*p1**2 + p1*p2**2) - 4*p1**2 * p2**2
+        return sqrt(numer / n)
