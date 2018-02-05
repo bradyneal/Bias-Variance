@@ -191,7 +191,7 @@ def hamming_std(n, p1, p2=None):
     """
     Return the standard deviation under the following assumptions:
     Same 1 and 2 as for the expectation.
-    3. P(X_i = Y_i) and P(X_j = Y_j) are independent. Given assumptions 1 and 2,
+    3. (X_i = Y_i) and (X_j = Y_j) are independent. Given assumptions 1 and 2,
     this amounts to adding the assumption that the ith and jth predictions from
     the same classifier are the independent (obviously false assumption).
     """
@@ -213,7 +213,7 @@ def hamming_z_score(seq1, seq2, p1=None, p2=None):
     2. X_i and Y_i are conditionally independent (conditioned on i). In other
     words, the predictions between any two learned models on the same test
     example are independent (obviously false assumption).
-    3. P(X_i = Y_i) and P(X_j = Y_j) are independent. Given assumptions 1 and 2,
+    3. (X_i = Y_i) and (X_j = Y_j) are independent. Given assumptions 1 and 2,
     this amounts to adding the assumption that the ith and jth predictions from
     the same classifier are the independent (obviously false assumption).
     """
