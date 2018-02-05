@@ -171,10 +171,13 @@ def hamming_diff(seq1, seq2, p1=None, p2=None):
     If p is specified, use it as the common p for both vector. Otherwise,
     calculate each vector's respective p and use those.
     """
+    # Use given p1 and p2
     if p1 is not None and p2 is not None:
         expected = expected_hamming(p1, p2)
+    # Use p1 as single p
     elif p1 is not None:
         expected = expected_hamming(p1)
+    # Calculate and use p1 and p2
     elif p1 is None and p2 is None:
         p1 = torch.mean(seq1)
         p2 = torch.mean(seq2)
@@ -198,3 +201,34 @@ def hamming_std(n, p1, p2=None):
     else:
         numer = p1 + p2 - 4*p1*p2 - p1**2 - p2**2 + 4*(p2*p1**2 + p1*p2**2) - 4*p1**2 * p2**2
         return sqrt(numer / n)
+    
+
+def hamming_z_score(seq1, seq2, p1=None, p2=None):
+    """
+    Return the z score of the hamming distance under the specified 3 assumptions:
+    1. P(X_i = Y_i) = P(X_j = Y_j). In words, this means (X_i, Y_i) and
+    (X_j, Y_j) are identically jointly distributed. In other words, all data
+    points are equally easy (or hard) to learn (this is an empirically false
+    assumption).
+    2. X_i and Y_i are conditionally independent (conditioned on i). In other
+    words, the predictions between any two learned models on the same test
+    example are independent (obviously false assumption).
+    3. P(X_i = Y_i) and P(X_j = Y_j) are independent. Given assumptions 1 and 2,
+    this amounts to adding the assumption that the ith and jth predictions from
+    the same classifier are the independent (obviously false assumption).
+    """
+    # Use given p1 and p2
+    if p1 is not None and p2 is not None:
+        expected = expected_hamming(p1, p2)
+    # Use p1 as single p
+    elif p1 is not None:
+        expected = expected_hamming(p1)
+    # Calculate and use p1 and p2
+    elif p1 is None and p2 is None:
+        p1 = torch.mean(seq1)
+        p2 = torch.mean(seq2)
+        expected = expected_hamming(p1, p2)
+    else:
+        raise ValueError('Invalid arguments: p1 is None and p2 is not None')
+    std = hamming_std(len(seq1), p1, p2)
+    return (hamming(seq1, seq2) - expected) / std
