@@ -81,8 +81,10 @@ class DataModelComp:
  
     def train(self, epochs=None, eval_path=False):
         if eval_path:
-            train_seq = []
-            test_seq = []
+            _, _, train_bitmap = self.evaluate_train()
+            _, _, test_bitmap = self.evaluate_test()
+            train_seq = [train_bitmap]
+            test_seq = [test_bitmap]
         if epochs is None:
             epochs = self.epochs
         for epoch in range(1, epochs + 1):
