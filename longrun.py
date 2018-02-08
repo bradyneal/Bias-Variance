@@ -9,9 +9,9 @@ import os
 import re
 from itertools import combinations
 from fileio import load_model, load_train_bitmap, load_test_bitmap, get_train_test_modifiers, \
-    save_model, save_weights, save_train_bitmap, save_test_bitmap, save_pairwise_dists
+    save_model, save_weights, save_train_bitmap, save_test_bitmap, save_pairwise_dists, save_opt_path_bitmaps
 from models import ShallowNet
-from infmetrics import hamming, hamming_diff
+from infmetrics import hamming, hamming_diff, hamming_z_score
 
 SLURM_ID = 116568
 
@@ -32,7 +32,7 @@ def eval_saved_models_and_save(hidden_sizes, num_runs, slurm_id, start_i=0):
             eval_model_and_save(data_model_comp, num_hidden, i, slurm_id)
 
 
-def train_shallow_nns_and_save(hidden_sizes, num_runs, slurm_id=None, start_i=0):
+def train_shallow_nns_and_save(hidden_sizes, num_runs, slurm_id=None, start_i=0, eval_path=False):
     """
     Train many shallow nns, evaluate them, and save everything.
     """
@@ -42,7 +42,7 @@ def train_shallow_nns_and_save(hidden_sizes, num_runs, slurm_id=None, start_i=0)
         hidden_sizes = [hidden_sizes]
     for num_hidden in hidden_sizes:
         for i in range(start_i, num_runs):
-            train_shallow_nn_and_save(num_hidden, i, slurm_id)
+            train_shallow_nn_and_save(num_hidden, i, slurm_id, eval_path=eval_path)
 
     
 def compute_pairwise_metrics_and_save(hidden_sizes, num_runs, slurm_id, metrics, modifiers=None):
@@ -116,8 +116,24 @@ def train_shallow_nn_and_save(num_hidden, i, slurm_id):
     save_model(shallow_net, num_hidden, i, slurm_id)
     save_weights(shallow_net.get_params(), num_hidden, i, slurm_id)
     eval_model_and_save(data_model_comp, num_hidden, i, slurm_id)
+    
+    
+def train_shallow_nn_and_save(num_hidden, i, slurm_id, eval_path=False):
+    """
+    Train a single shallow nn, evaluate it on train and test set,
+    and save everything.
+    """
+    shallow_net = ShallowNet(num_hidden)
+    data_model_comp = DataModelComp(shallow_net, lr=0.1, momentum=0.5, epochs=10)
+    opt_path = data_model_comp.train(eval_path=eval_path)
+    if eval_path:
+        save_opt_path_bitmaps(opt_path, num_hidden, i, slurm_id)
+    save_model(shallow_net, num_hidden, i, slurm_id)
+    save_weights(shallow_net.get_params(), num_hidden, i, slurm_id)
+    eval_model_and_save(data_model_comp, num_hidden, i, slurm_id)
 
 
 if __name__ == '__main__':
-    compute_pairwise_metrics_and_save([5, 10, 15, 25, 50, 100, 250, 500], 20, SLURM_ID, [hamming, hamming_diff], ['hamm', 'hammdiffp2'])
+    train_shallow_nns_and_save([10, 25, 100], num_runs=100, eval_path=True)
+    # compute_pairwise_metrics_and_save([5, 10, 15, 25, 50, 100, 250, 500], 20, SLURM_ID, hamming_z_score, 'hamm_z')
     # eval_saved_models_and_save([10, 100], num_runs=1000, start_i=20, slurm_id=SLURM_ID)
