@@ -21,10 +21,10 @@ def get_pairwise_dists(seqs, metric):
     between the the ith and jth sequence
     """
     num_seqs = len(seqs)
-    dist_lists = [[] for _ in xrange(num_seqs)]
+    dist_lists = [[] for _ in range(num_seqs)]
     all_dists = []
-    for i in xrange(num_seqs):
-        for j in xrange(i + 1, num_seqs):
+    for i in range(num_seqs):
+        for j in range(i + 1, num_seqs):
             dist = metric(seqs[i], seqs[j])
             dist_lists[i].append(dist)
             dist_lists[j].append(dist)
@@ -42,11 +42,14 @@ def get_pairwise_hamming_dists(seqs):
     return get_pairwise_dists(seqs, hamming)
 
 
-def get_pairwise_hamming_diffs(seqs, p):
+def get_pairwise_hamming_diffs(seqs, p=None):
     """
     Same as above, but using the relative hamming distance metric defined below
     """
-    return get_pairwise_dists(seqs, partial(hamming_diff, p=p))
+    if p is None:
+        return get_pairwise_dists(seqs, hamming_diff)
+    else:
+        return get_pairwise_dists(seqs, partial(hamming_diff, p1=p))
 
 
 def get_pairwise_pos_agreements(seqs):
