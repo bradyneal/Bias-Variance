@@ -38,6 +38,7 @@ class ShallowNet(nn_custom_super):
     
     def __init__(self, num_hidden):
         super(ShallowNet, self).__init__()
+        self.num_hidden = num_hidden
         self.fc1 = nn.Linear(MNIST_D, num_hidden)
         self.fc2 = nn.Linear(num_hidden, MNIST_K)
         

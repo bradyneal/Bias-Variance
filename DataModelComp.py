@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from fileio import save_fine_path_train_bitmaps, save_fine_path_test_bitmaps
 
 
 class DataModelComp:
@@ -14,9 +15,10 @@ class DataModelComp:
     of the model on the dataset, etc.
     """
 
-    def __init__(self, model, batch_size=64, test_batch_size=10000, epochs=10,
+    def __init__(self, model, batch_size=100, test_batch_size=10000, epochs=10,
                  lr=0.01, decay=False, step_size=10, gamma=0.1, momentum=0.5,
-                 no_cuda=False, seed=False, log_interval=100):
+                 no_cuda=False, seed=False, log_interval=100,
+                 run_i=0, save_interval=None):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -26,6 +28,9 @@ class DataModelComp:
         self.cuda = not no_cuda and torch.cuda.is_available()
         self.seed = seed
         self.log_interval = log_interval
+        self.save_interval = save_interval
+        self.num_saved_iters = 0
+        self.run_i = run_i
 
         if self.cuda:
             print('Using CUDA')
@@ -78,6 +83,14 @@ class DataModelComp:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
+            if self.save_interval is not None and batch_idx % self.save_interval == 0:
+                train_bitmap, test_bitmap = self.get_train_test_bitmaps()
+                save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden,
+                                             self.run_i, self.num_saved_iters)
+                save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden,
+                                            self.run_i, self.num_saved_iters)
+                self.num_saved_iters += 1
+                
  
     def train(self, epochs=None, eval_path=False):
         if eval_path:
@@ -90,12 +103,16 @@ class DataModelComp:
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
             if eval_path:
-                 _, _, train_bitmap = self.evaluate_train()
-                 _, _, test_bitmap = self.evaluate_test()
+                 train_bitmap, test_bitmap = self.get_train_test_bitmaps()
                  train_seq.append(train_bitmap)
                  test_seq.append(test_bitmap)
         if eval_path:
             return train_seq, test_seq
+  
+    def get_train_test_bitmaps(self):
+        _, _, train_bitmap = self.evaluate_train()
+        _, _, test_bitmap = self.evaluate_test()
+        return train_bitmap, test_bitmap
              
     def evaluate_train(self):
         """Evaluate the training loss at the current setting of weights"""
