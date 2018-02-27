@@ -42,14 +42,16 @@ def get_pairwise_hamming_dists(seqs):
     return get_pairwise_dists(seqs, hamming)
 
 
-def get_pairwise_hamming_diffs(seqs, p=None):
+def get_pairwise_hamming_diffs(seqs, p=None, ps=None):
     """
     Same as above, but using the relative hamming distance metric defined below
     """
-    if p is None:
-        return get_pairwise_dists(seqs, hamming_diff)
-    else:
+    if p is not None:
         return get_pairwise_dists(seqs, partial(hamming_diff, p1=p))
+    elif ps is not None:
+        return get_pairwise_dists(seqs, partial(hamming_diff, ps=ps))
+    else:
+        return get_pairwise_dists(seqs, hamming_diff)
 
 
 def get_pairwise_pos_agreements(seqs):
@@ -165,17 +167,32 @@ def expected_hamming(p1, p2=None):
         return 2 * p1 * (1 - p1)
     else:
         return p1 + p2 - 2 * p1 * p2
+    
+    
+def expected_hamming_nonid(ps):
+    """
+    Compute the expectation without assumption 1 made above
+    (no longer assumes the ps are identically distributed).
+    """
+    return torch.mean(2 * ps * (1 - ps))
+        
 
-
-def hamming_diff(seq1, seq2, p1=None, p2=None):
+def hamming_diff(seq1, seq2, p1=None, p2=None, ps=None):
     """
     Return the difference between the hamming distance of the two sequences and
     the expected hamming distance between two random vectors.
     If p is specified, use it as the common p for both vector. Otherwise,
     calculate each vector's respective p and use those.
     """
+    # Use the list of ps (not identically distributed)
+    if ps is not None:
+        if isinstance(ps, torch.FloatTensor):
+            assert(len(ps) == len(seq1))
+            expected = expected_hamming_nonid(ps)
+        else:
+            raise ValueError('ps is not FloatTensor')
     # Use given p1 and p2
-    if p1 is not None and p2 is not None:
+    elif p1 is not None and p2 is not None:
         expected = expected_hamming(p1, p2)
     # Use p1 as single p
     elif p1 is not None:
