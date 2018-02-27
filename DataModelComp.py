@@ -29,7 +29,7 @@ class DataModelComp:
         self.seed = seed
         self.log_interval = log_interval
         self.save_interval = save_interval
-        self.num_saved_iters = 0
+        self.num_saved_iters = 1
         self.run_i = run_i
 
         if self.cuda:
@@ -65,6 +65,12 @@ class DataModelComp:
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
             batch_size=test_batch_size, shuffle=False, **kwargs)
+        
+        # Save initial bitmaps
+        if self.save_interval is not None:
+            train_bitmap, test_bitmap = self.get_train_test_bitmaps()
+            save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden, self.run_i, 0)
+            save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden, self.run_i, 0)
 
     def train_step(self, epoch=1):
         if self.decay:

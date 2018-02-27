@@ -27,7 +27,7 @@ def train_epoch1_shallow_nns_and_save(hidden_sizes, num_runs, start_i=0):
         for i in range(start_i, num_runs):
             shallow_net = ShallowNet(num_hidden)
             data_model_comp = DataModelComp(shallow_net, lr=0.1, momentum=0.5,
-                                            epochs=1, run_i=i, save_interval=60)
+                                            epochs=1, run_i=i, save_interval=1)
             data_model_comp.train()
             
 
@@ -136,7 +136,7 @@ def train_shallow_nn_and_save(num_hidden, i, slurm_id, eval_path=False):
 
 
 if __name__ == '__main__':
-    train_epoch1_shallow_nns_and_save([10, 25, 100], num_runs=100)
+    train_epoch1_shallow_nns_and_save(25, num_runs=100)
     # train_shallow_nns_and_save([10, 25, 100], num_runs=100, eval_path=True)
     # compute_pairwise_metrics_and_save([5, 10, 15, 25, 50, 100, 250, 500], 20, SLURM_ID, hamming_z_score, 'hamm_z')
     # eval_saved_models_and_save([10, 100], num_runs=1000, start_i=20, slurm_id=SLURM_ID)
