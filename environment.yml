@@ -1,0 +1,10 @@
+name: inf-path
+dependencies:
+  - python=3.6
+  - pytorch
+  - torchvision
+  - numpy
+  - scipy
+  - matplotlib
+  - scikit-learn
+  - pandas
