@@ -5,6 +5,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from torch.utils.data.sampler import SubsetRandomSampler
+import numpy as np
+from torchextra import SubsetSequentialSampler
 from fileio import save_fine_path_train_bitmaps, save_fine_path_test_bitmaps
 
 
@@ -51,26 +54,45 @@ class DataModelComp:
                 self.optimizer, step_size=step_size, gamma=gamma)
 
         # Load data
-        kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
-        self.train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST('./data', train=True, download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=batch_size, shuffle=True, **kwargs)
-        self.test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST('./data', train=False, transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=test_batch_size, shuffle=False, **kwargs)
+        self.train_loader, self.test_loader = self.get_data_loaders()
         
         # Save initial bitmaps
         if self.save_interval is not None:
             train_bitmap, test_bitmap = self.get_train_test_bitmaps()
             save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden, self.run_i, 0)
             save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden, self.run_i, 0)
+            
+    def get_data_loaders(self, same_dist=True, split_random_seed=0):
+        kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
+        transform = transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ])
+        train = datasets.MNIST('./data', train=True, download=True, transform=transform)
+        test = datasets.MNIST('./data', train=False, download=True, transform=transform)
+        if not same_dist:
+            train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size,
+                                                       shuffle=False, **kwargs)
+            test_loader = torch.utils.data.DataLoader(test, batch_size=test_batch_size,
+                                        shuffle=False, **kwargs)
+        else:
+            combined = torch.utils.data.ConcatDataset([train, test])
+            num_train = len(train)
+            n = len(combined)
+            indices = list(range(n))
+            
+            np.random.seed(split_random_seed)
+            np.random.shuffle(indices)
+            
+            train_idx, test_idx = indices[:num_train], indices[num_train:]
+            train_sampler = SubsetSequentialSampler(train_idx)
+            test_sampler = SubsetSequentialSampler(test_idx)
+            
+            train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
+                                                       sampler=train_sampler, **kwargs)
+            test_loader = torch.utils.data.DataLoader(combined, batch_size=self.test_batch_size,
+                                                      sampler=test_sampler, **kwargs)
+        return train_loader, test_loader
 
     def train_step(self, epoch=1):
         if self.decay:
