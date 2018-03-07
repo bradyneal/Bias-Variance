@@ -20,11 +20,22 @@ PATH_DIR =  os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR =  os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 TRAIN_FINE_PATH_DIR =  os.path.join(FINE_PATH_DIR, 'train_bitmaps')
 TEST_FINE_PATH_DIR =  os.path.join(FINE_PATH_DIR, 'test_bitmaps')
+PATHS = [SAVED_DIR, MODEL_DIR, TRAIN_BITMAP_DIR, TEST_BITMAP_DIR, WEIGHT_DIR,
+         PAIRWISE_DISTS_DIR, PATH_DIR, FINE_PATH_DIR, TRAIN_FINE_PATH_DIR,
+         TEST_FINE_PATH_DIR]
 
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
 TO_CPU_DEFAULT = False
+
+def make_all_dirs():
+    """Make all the directories if they don't already exist"""
+    for path in PATHS:
+        if not os.path.exists(path):
+            os.makedirs(path)
+            
+make_all_dirs()
 
 """Specific saving functions"""
 def save_model(model, num_hidden, i, slurm_id):
