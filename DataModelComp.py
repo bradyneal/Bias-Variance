@@ -62,7 +62,7 @@ class DataModelComp:
             save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden, self.run_i, 0)
             save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden, self.run_i, 0)
             
-    def get_data_loaders(self, same_dist=True, split_random_seed=0):
+    def get_data_loaders(self, same_dist=False, split_random_seed=0):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
         transform = transforms.Compose([
                                transforms.ToTensor(),
