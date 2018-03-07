@@ -27,8 +27,9 @@ def train_epoch1_shallow_nns_and_save(hidden_sizes, num_runs, start_i=0):
         for i in range(start_i, num_runs):
             shallow_net = ShallowNet(num_hidden)
             data_model_comp = DataModelComp(shallow_net, lr=0.1, momentum=0.5,
-                                            epochs=1, run_i=i, save_interval=1)
+                                            epochs=1, run_i=i, save_interval=5)
             data_model_comp.train()
+            print('finished {} of {}'.format(i + 1, num_runs))
             
 
 def eval_saved_models_and_save(hidden_sizes, num_runs, slurm_id, start_i=0):
