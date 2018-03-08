@@ -9,7 +9,8 @@ import torch
 import getpass
 
 USERNAME = getpass.getuser()
-OUTPUT_DIR = os.path.join('/data/milatmp1/', USERNAME, '/information-paths/')
+OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 TRAIN_BITMAP_DIR =  os.path.join(SAVED_DIR, 'train_bitmaps')
@@ -33,8 +34,9 @@ def make_all_dirs():
     """Make all the directories if they don't already exist"""
     for path in PATHS:
         if not os.path.exists(path):
+            print("Creating directory:", path)
             os.makedirs(path)
-            
+
 make_all_dirs()
 
 """Specific saving functions"""
