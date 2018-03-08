@@ -55,13 +55,13 @@ class DataModelComp:
 
         # Load data
         self.train_loader, self.test_loader = self.get_data_loaders()
-        
+
         # Save initial bitmaps
         if self.save_interval is not None:
             train_bitmap, test_bitmap = self.get_train_test_bitmaps()
             save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden, self.run_i, 0)
             save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden, self.run_i, 0)
-            
+
     def get_data_loaders(self, same_dist=False, split_random_seed=0):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
         transform = transforms.Compose([
@@ -71,23 +71,23 @@ class DataModelComp:
         train = datasets.MNIST('./data', train=True, download=True, transform=transform)
         test = datasets.MNIST('./data', train=False, download=True, transform=transform)
         if not same_dist:
-            train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size,
+            train_loader = torch.utils.data.DataLoader(train, batch_size=self.batch_size,
                                                        shuffle=False, **kwargs)
-            test_loader = torch.utils.data.DataLoader(test, batch_size=test_batch_size,
+            test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                         shuffle=False, **kwargs)
         else:
             combined = torch.utils.data.ConcatDataset([train, test])
             num_train = len(train)
             n = len(combined)
             indices = list(range(n))
-            
+
             np.random.seed(split_random_seed)
             np.random.shuffle(indices)
-            
+
             train_idx, test_idx = indices[:num_train], indices[num_train:]
             train_sampler = SubsetSequentialSampler(train_idx)
             test_sampler = SubsetSequentialSampler(test_idx)
-            
+
             train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
                                                        sampler=train_sampler, **kwargs)
             test_loader = torch.utils.data.DataLoader(combined, batch_size=self.test_batch_size,
@@ -118,8 +118,8 @@ class DataModelComp:
                 save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden,
                                             self.run_i, self.num_saved_iters)
                 self.num_saved_iters += 1
-                
- 
+
+
     def train(self, epochs=None, eval_path=False):
         if eval_path:
             _, _, train_bitmap = self.evaluate_train()
@@ -136,12 +136,12 @@ class DataModelComp:
                  test_seq.append(test_bitmap)
         if eval_path:
             return train_seq, test_seq
-  
+
     def get_train_test_bitmaps(self):
         _, _, train_bitmap = self.evaluate_train()
         _, _, test_bitmap = self.evaluate_test()
         return train_bitmap, test_bitmap
-             
+
     def evaluate_train(self):
         """Evaluate the training loss at the current setting of weights"""
         num_train = len(self.train_loader.dataset)
@@ -153,21 +153,21 @@ class DataModelComp:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             output = self.model(data)
-            
+
             # Loss
             batch_loss = F.nll_loss(output, target)
             total_loss += batch_loss
-            
+
             # Predictions and accuracy accumulation
             pred = output.data.max(1, keepdim=True)[1]
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             num_correct += batch_correct.sum()
             correct = torch.cat([correct, batch_correct], 0)
-        
+
         acc = num_correct / num_train
         avg_loss = total_loss / num_train
         return acc, avg_loss, correct
-               
+
     def evaluate_test(self):
         self.model.eval()
         num_test = len(self.test_loader.dataset)
@@ -189,5 +189,5 @@ class DataModelComp:
         acc = num_correct / num_test
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             avg_loss, num_correct, num_test, 100. * acc))
-        
+
         return acc, avg_loss, correct
