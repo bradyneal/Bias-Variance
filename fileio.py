@@ -9,7 +9,9 @@ import torch
 import getpass
 
 USERNAME = getpass.getuser()
-OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+#OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+#  Local changes only
+OUTPUT_DIR = os.path.join(os.getcwd(), 'save_info')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
