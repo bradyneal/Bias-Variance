@@ -197,6 +197,7 @@ class DataModelComp:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             output = self.model(data)
+            #print('made it to iteration {}'.format(batch_idx))
 
             # Loss
             batch_loss = F.nll_loss(output, target)

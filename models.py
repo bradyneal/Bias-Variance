@@ -152,7 +152,7 @@ class AlexNetCIFAR10(nn_custom_super):
 class InceptionCIFAR10(nn_custom_super):
     def __init__(self):
         super(InceptionCIFAR10, self).__init__()
-        self.conv1 = nn.Conv2d(3, 96, kernel_size=3, stride=1, padding=0)
+        self.conv1 = nn.Conv2d(3, 96, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(96)
 
         self.incp1 = InceptionModule(96, 32, 32)
@@ -168,7 +168,7 @@ class InceptionCIFAR10(nn_custom_super):
         self.incp7 = InceptionModule(240, 176, 160)
         self.incp8 = InceptionModule(336, 176, 160)
         self.avgpool = nn.AvgPool2d(kernel_size=7)
-        self.fc = nn.Linear(96, 10)
+        self.fc = nn.Linear(336, 10)
 
     def forward(self, x):
         h1 = self.bn1(self.conv1(x))
@@ -187,9 +187,8 @@ class InceptionCIFAR10(nn_custom_super):
         h10 = self.incp7.forward(h9)
         h11 = self.incp8.forward(h10)
         h12 = self.avgpool(h11)
-        out = self.fc(h12)
+        out = self.fc(h12.squeeze())
         return F.log_softmax(out)
-
 
 
 class InceptionModule(nn.Module):
@@ -210,16 +209,11 @@ class DownSampleModule(nn.Module):
     #  Downsample model from fig 3
     def __init__(self, in_channels, ch3):
         super(DownSampleModule, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, ch3, kernel_size=3, stride=2, padding=0)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0)
+        self.conv1 = nn.Conv2d(in_channels, ch3, kernel_size=3, stride=2, padding=1)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, x):
-        brachconv = self.conv1(x)
+        branchconv = self.conv1(x)
         branchpool = self.maxpool(x)
-        outputs = [brachconv, branchpool]
+        outputs = [branchconv, branchpool]
         return torch.cat(outputs, 1)
-
-
-
-
-
