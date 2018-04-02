@@ -150,8 +150,9 @@ class AlexNetCIFAR10(nn_custom_super):
 
 
 class InceptionCIFAR10(nn_custom_super):
-    def __init__(self):
+    def __init__(self, use_batch_norm=True):
         super(InceptionCIFAR10, self).__init__()
+        self.use_batch_norm = use_batch_norm
         self.conv1 = nn.Conv2d(3, 96, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(96)
 
@@ -171,7 +172,9 @@ class InceptionCIFAR10(nn_custom_super):
         self.fc = nn.Linear(336, 10)
 
     def forward(self, x):
-        h1 = self.bn1(self.conv1(x))
+        h1 = self.conv1(x)
+        if self.use_batch_norm:
+            h1 = self.bn1(h1)
         h1 = F.relu(h1, inplace=True)
 
         h2 = self.incp1.forward(h1)

@@ -5,7 +5,7 @@ from models import ShallowNetCIFAR10, ThreeLayerNetCIFAR10, AlexNetCIFAR10, Ince
 deepish_net = ThreeLayerNetCIFAR10(num_hidden=512)
 shallow_net = ShallowNetCIFAR10(num_hidden=512)
 alex_net = AlexNetCIFAR10()
-incp_net = InceptionCIFAR10()
+incp_net = InceptionCIFAR10(use_batch_norm=True)
 
 data_model_comp = DataModelComp(alex_net, batch_size=16, test_batch_size=16, epochs=10,
                                 lr=0.01, decay=False, step_size=10, gamma=0.1, momentum=0.5,
