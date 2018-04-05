@@ -19,9 +19,9 @@ class DataModelComp:
     """
 
     def __init__(self, model, batch_size=100, test_batch_size=10000, epochs=10,
-                 lr=0.01, decay=False, step_size=10, gamma=0.1, momentum=0.5,
+                 lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
-                 num_train_after_split=None, save_interval=None, save_at_end=False,
+                 num_train_after_split=None, save_interval=None, save_every_epoch=False,
                  train_val_split_seed=0, bootstrap=False):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
@@ -37,6 +37,8 @@ class DataModelComp:
         self.run_i = run_i
         self.num_train_after_split = num_train_after_split
         self.train_val_split_seed = train_val_split_seed
+        self.bootstrap = bootstrap
+        self.save_every_epoch = save_every_epoch
 
         if self.cuda:
             print('Using CUDA')
@@ -188,12 +190,14 @@ class DataModelComp:
                 test_seq.append(test_bitmap)
         if eval_path:
             return train_seq, test_seq
-        if self.save_at_end:
+
+        if self.save_every_epoch:
             bitmaps = self.get_bitmaps()
             for i, bitmap in enumerate(bitmaps):
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
-                                       self.run_i, 0, i)
+                                       self.run_i, epoch, i)
         val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
+        print("Training complete!!")
         return val_acc, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
