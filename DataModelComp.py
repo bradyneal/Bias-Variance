@@ -8,9 +8,7 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
-from fileio import save_fine_path_train_bitmaps, save_fine_path_test_bitmaps
-
-# TODO: validation_set, return val. accuracy from train, iterate over different values of k and see accuracies, once we have a value of k, obtain bitmaps and see variance between those bitmaps
+from fileio import save_fine_path_bitmaps
 
 
 class DataModelComp:
@@ -24,7 +22,7 @@ class DataModelComp:
                  lr=0.01, decay=False, step_size=10, gamma=0.1, momentum=0.5,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
                  num_train_after_split=None, save_interval=None, save_at_end=False,
-                 train_val_split_seed=0):
+                 train_val_split_seed=0, bootstrap=False):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -39,7 +37,6 @@ class DataModelComp:
         self.run_i = run_i
         self.num_train_after_split = num_train_after_split
         self.train_val_split_seed = train_val_split_seed
-        self.cur_iters = 0
 
         if self.cuda:
             print('Using CUDA')
@@ -65,11 +62,10 @@ class DataModelComp:
 
         # Save initial bitmaps
         if self.save_interval is not None:
-            train_bitmap, test_bitmap = self.get_train_test_bitmaps()
-            save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden,
-                                         self.run_i, 0)
-            save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden,
-                                        self.run_i, 0)
+            bitmaps = self.get_bitmaps()
+            for i, bitmap in enumerate(bitmaps):
+                save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                       self.run_i, 0, i)
 
     def get_data_loaders(self, same_dist=False):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
@@ -84,9 +80,10 @@ class DataModelComp:
 
         np.random.seed(self.train_val_split_seed)
 
+        num_train = len(train)
         num_val = len(train) // 5
-        num_train = len(train) - num_val
 
+        # TODO: fix num_train and num_val
         self.num_train = num_train
         self.num_val = num_val
 
@@ -102,6 +99,8 @@ class DataModelComp:
         train_and_val_idxs = np.random.choice(num_train, num_val+self.num_train_after_split,
                                               replace=False)
         train_idxs = train_and_val_idxs[:self.num_train_after_split]
+        if self.bootstrap:
+            train_idxs = np.random.choice(train_idxs, self.num_train_after_split, replace=True)
         val_idxs = train_and_val_idxs[self.num_train_after_split:]
 
         train_sampler = SubsetSequentialSampler(train_idxs)
@@ -115,6 +114,7 @@ class DataModelComp:
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
 
+        # TODO: fix this
         # else:
         #     combined = torch.utils.data.ConcatDataset([train, test])
         #     num_train = len(train)
@@ -153,11 +153,10 @@ class DataModelComp:
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
             if self.save_interval is not None and batch_idx % self.save_interval == 0:
-                train_bitmap, test_bitmap = self.get_train_test_bitmaps()
-                save_fine_path_train_bitmaps(train_bitmap, self.model.num_hidden,
-                                             self.run_i, self.num_saved_iters)
-                save_fine_path_test_bitmaps(test_bitmap, self.model.num_hidden,
-                                            self.run_i, self.num_saved_iters)
+                bitmaps = self.get_bitmaps()
+                for i, bitmap in enumerate(bitmaps):
+                    save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                           self.run_i, self.num_saved_iters, i)
                 self.num_saved_iters += 1
 
     def train(self, epochs=None, eval_path=False):
@@ -170,7 +169,7 @@ class DataModelComp:
             test_seq = [test_bitmap]
         if epochs is None:
             epochs = self.epochs * self.num_train // self.num_train_after_split
-        epochs_per_val = self.num_train // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
+        epochs_per_val = (self.num_train - self.num_val) // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
         last_val_accs = deque(maxlen=10)
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
@@ -178,26 +177,32 @@ class DataModelComp:
             # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs) TODO: introduce option for this
             if epoch % epochs_per_val == 0:
                 val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
-                if len(last_val_accs) == 10 and val_acc < last_val_accs[0]:  # TODO: fix 10 here
+                if len(last_val_accs) == 10 and val_acc < last_val_accs[0]:  # TODO: make 10 a parameter
                     break
                 last_val_accs.append(val_acc)
                 self.evaluate_train(self.num_train_after_split * epoch)
 
             if eval_path:
-                train_bitmap, test_bitmap = self.get_train_test_bitmaps()
+                train_bitmap, _, test_bitmap = self.get_bitmaps()
                 train_seq.append(train_bitmap)
                 test_seq.append(test_bitmap)
         if eval_path:
             return train_seq, test_seq
+        if self.save_at_end:
+            bitmaps = self.get_bitmaps()
+            for i, bitmap in enumerate(bitmaps):
+                save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                       self.run_i, 0, i)
         val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
         return val_acc, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
 
-    def get_train_test_bitmaps(self, cur_iter):
+    def get_bitmaps(self, cur_iter):
         _, _, train_bitmap = self.evaluate_train(cur_iter)
+        _, _, val_bitmap = self.evaluate_val(cur_iter)
         _, _, test_bitmap = self.evaluate_test(cur_iter)
-        return train_bitmap, test_bitmap
+        return train_bitmap, val_bitmap, test_bitmap
 
     # TODO: combine next 3 functions into 1
     def evaluate_train(self, cur_iter):
