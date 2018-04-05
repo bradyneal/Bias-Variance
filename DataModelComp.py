@@ -64,7 +64,7 @@ class DataModelComp:
 
         # Save initial bitmaps
         if self.save_interval is not None:
-            bitmaps = self.get_bitmaps()
+            bitmaps = self.get_bitmaps(0)
             for i, bitmap in enumerate(bitmaps):
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                        self.run_i, 0, i)
@@ -155,7 +155,7 @@ class DataModelComp:
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader), loss.data[0]))
             if self.save_interval is not None and batch_idx % self.save_interval == 0:
-                bitmaps = self.get_bitmaps()
+                bitmaps = self.get_bitmaps(self.save_interval * self.num_saved_iters)
                 for i, bitmap in enumerate(bitmaps):
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, self.num_saved_iters, i)
@@ -165,8 +165,8 @@ class DataModelComp:
         print("Learning rate: {}, momentum: {}, number of training examples: {}"
               .format(self.lr, self.momentum, self.num_train_after_split))
         if eval_path:
-            _, _, train_bitmap = self.evaluate_train()
-            _, _, test_bitmap = self.evaluate_test()
+            _, _, train_bitmap = self.evaluate_train(0)
+            _, _, test_bitmap = self.evaluate_test(0)
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
         if epochs is None:
@@ -185,14 +185,14 @@ class DataModelComp:
                 self.evaluate_train(self.num_train_after_split * epoch)
 
             if eval_path:
-                train_bitmap, _, test_bitmap = self.get_bitmaps()
+                train_bitmap, _, test_bitmap = self.get_bitmaps(self.num_train_after_split * epoch)
                 train_seq.append(train_bitmap)
                 test_seq.append(test_bitmap)
         if eval_path:
             return train_seq, test_seq
 
         if self.save_every_epoch:
-            bitmaps = self.get_bitmaps()
+            bitmaps = self.get_bitmaps(self.num_train_after_split * epoch)
             for i, bitmap in enumerate(bitmaps):
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                        self.run_i, epoch, i)
