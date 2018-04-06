@@ -188,14 +188,15 @@ class DataModelComp:
                 train_bitmap, _, test_bitmap = self.get_bitmaps(self.num_train_after_split * epoch)
                 train_seq.append(train_bitmap)
                 test_seq.append(test_bitmap)
+
+            if self.save_every_epoch:
+                bitmaps = self.get_bitmaps(self.num_train_after_split * epoch)
+                for i, bitmap in enumerate(bitmaps):
+                    save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                           self.run_i, epoch, i)
+                                           
         if eval_path:
             return train_seq, test_seq
-
-        if self.save_every_epoch:
-            bitmaps = self.get_bitmaps(self.num_train_after_split * epoch)
-            for i, bitmap in enumerate(bitmaps):
-                save_fine_path_bitmaps(bitmap, self.model.num_hidden,
-                                       self.run_i, epoch, i)
         val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
         print("Training complete!!")
         return val_acc, self.num_train_after_split * epoch
