@@ -60,7 +60,8 @@ def save_opt_path_bitmaps(opt_path, num_hidden, i, slurm_id):
 
 
 def save_fine_path_bitmaps(bitmap, num_hidden, i, inter, type):
-    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, type))
+    slurm_id = os.environ["SLURM_JOB_ID"]
+    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id, type))
 
 """Specific loading functions"""
 
@@ -85,8 +86,8 @@ def load_opt_path_bitmaps(num_hidden, i, slurm_id):
     return load_torch(get_opt_path_bitmaps_path(num_hidden, i, slurm_id))
 
 
-def load_fine_path_bitmaps(num_hidden, i, inter, type):
-    return load_torch(get_fine_path_bitmaps_path(num_hidden, i, inter, type))
+def load_fine_path_bitmaps(num_hidden, i, inter, slurm_id, type):
+    return load_torch(get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id, type))
 
 
 def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
@@ -184,11 +185,11 @@ def get_opt_path_bitmaps_path(num_hidden, i, slurm_id):
     return get_path(PATH_DIR, num_hidden, i, slurm_id)
 
 
-def get_fine_path_bitmaps_path(num_hidden, i, inter,
+def get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id,
                                type  # 0 for train, 1 for validation, 2 for test
                                ):
     return os.path.join(FINE_PATH_DIRS[type],
-                        'shallow{}_run{}_inter{}.pt'.format(num_hidden, i, inter))
+                        'shallow{}_run{}_inter{}_job{}.pt'.format(num_hidden, i, inter, slurm_id))
 
 
 def get_path(directory, num_hidden, i, slurm_id):

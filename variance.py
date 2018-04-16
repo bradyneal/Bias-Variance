@@ -1,38 +1,39 @@
-# To run this file,
+# To get the variances,
 # from variance import get_variances
-# variances = get_variances([5, 25, 100, 1000, 10000])
-# Returns
+# variances = get_variances([5, 25, 100, 1000, 10000], 20, 159282)
+# Returns variances in a 2d array - dimensions are hidden size and ty
 
 import torch
 import os.path
 
 from fileio import get_fine_path_bitmaps_path, load_fine_path_bitmaps
 
-NUM_SEEDS_COMPLETE = 15
 
-def find_last_epoch_when_saving_every_epoch(num_hidden, seed, type):  # TODO: add 80 and 100 as parameters
-    for i in range(100):
-        if not os.path.isfile(get_fine_path_bitmaps_path(num_hidden, seed, i, type)):
+def find_last_epoch_when_saving_every_epoch(num_hidden, seed, slurm_id, type, max_epochs=10000):
+    for i in range(1, max_epochs):
+        if not os.path.isfile(get_fine_path_bitmaps_path(num_hidden, seed, i, slurm_id, type)):
             break
 
-    if i == 0 or i > 80:
+    if i == 0:
         return None
-    return i
+    return i-1
+
 
 def calculate_variance(bitmaps, mean):
     return torch.mean((bitmaps - mean) ** 2)
 
-def get_variances(num_hidden_arr, slurm_id):
+
+def get_variances(num_hidden_arr, num_seeds, slurm_id):
     variances = []
     for num_hidden in num_hidden_arr:
         train_val_test_variances = []
         for type in range(3):
             bitmaps = None
-            for seed in range(NUM_SEEDS_COMPLETE):
-                last_epoch = find_last_epoch(num_hidden, seed, type)
+            for seed in range(num_seeds):
+                last_epoch = find_last_epoch_when_saving_every_epoch(num_hidden, seed, slurm_id, type)
                 if last_epoch is None:
                     continue
-                bitmap = load_fine_path_bitmaps(num_hidden, seed, last_epoch, type)
+                bitmap = load_fine_path_bitmaps(num_hidden, seed, last_epoch, slurm_id, type)
                 if bitmaps is None:
                     bitmaps = bitmap
                 else:
