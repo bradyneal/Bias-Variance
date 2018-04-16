@@ -22,7 +22,7 @@ class DataModelComp:
                  lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
                  num_train_after_split=None, save_interval=None, save_every_epoch=False,
-                 train_val_split_seed=0, bootstrap=False):
+                 train_val_split_seed=0, bootstrap=False, early_stopping=False, early_stopping_num_wait=10):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -39,6 +39,8 @@ class DataModelComp:
         self.train_val_split_seed = train_val_split_seed
         self.bootstrap = bootstrap
         self.save_every_epoch = save_every_epoch
+        self.early_stopping = early_stopping
+        self.early_stopping_num_wait = early_stopping_num_wait
 
         if self.cuda:
             print('Using CUDA')
@@ -82,23 +84,22 @@ class DataModelComp:
 
         np.random.seed(self.train_val_split_seed)
 
-        num_train = len(train)
+        num_train_before_split = len(train)
         num_val = len(train) // 5
 
-        # TODO: fix num_train and num_val
-        self.num_train = num_train
+        self.num_train_before_split = num_train_before_split
         self.num_val = num_val
 
         if self.num_train_after_split is None:
-            self.num_train_after_split = num_train - num_val
+            self.num_train_after_split = num_train_before_split - num_val
 
-        if num_val + self.num_train_after_split > num_train:
+        if num_val + self.num_train_after_split > num_train_before_split:
             print("k must be less than %d (number of training examples = %d"
                   " - number of validation examples = %d)" %
-                  (num_train-num_val, num_train, num_val))
+                  (num_train_before_split-num_val, num_train_before_split, num_val))
             raise Exception
 
-        train_and_val_idxs = np.random.choice(num_train, num_val+self.num_train_after_split,
+        train_and_val_idxs = np.random.choice(num_train_before_split, num_val+self.num_train_after_split,
                                               replace=False)
         train_idxs = train_and_val_idxs[:self.num_train_after_split]
         if self.bootstrap:
@@ -170,16 +171,16 @@ class DataModelComp:
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
         if epochs is None:
-            epochs = self.epochs * self.num_train // self.num_train_after_split
-        epochs_per_val = (self.num_train - self.num_val) // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
+            epochs = self.epochs * self.num_train_before_split // self.num_train_after_split
+        epochs_per_val = (self.num_train_before_split - self.num_val) // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
         last_val_accs = deque(maxlen=10)
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
 
-            # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs) TODO: introduce option for this
-            if epoch % epochs_per_val == 0:
+            # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs)
+            if self.early_stopping and epoch % epochs_per_val == 0:
                 val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
-                if len(last_val_accs) == 10 and val_acc < last_val_accs[0]:  # TODO: make 10 a parameter
+                if len(last_val_accs) == self.early_stopping_num_wait and val_acc < last_val_accs[0]:
                     break
                 last_val_accs.append(val_acc)
                 self.evaluate_train(self.num_train_after_split * epoch)
@@ -194,7 +195,7 @@ class DataModelComp:
                 for i, bitmap in enumerate(bitmaps):
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, epoch, i)
-                                           
+
         if eval_path:
             return train_seq, test_seq
         val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
@@ -203,6 +204,7 @@ class DataModelComp:
 
         # Return no of iterations - epoch * k / batch_size
 
+    # Returns bitmaps on training, validation and test data
     def get_bitmaps(self, cur_iter):
         _, _, train_bitmap = self.evaluate_train(cur_iter)
         _, _, val_bitmap = self.evaluate_val(cur_iter)
@@ -212,7 +214,7 @@ class DataModelComp:
     # TODO: combine next 3 functions into 1
     def evaluate_train(self, cur_iter):
         self.model.eval()
-        num_train = self.num_train_after_split
+        num_train_after_split = self.num_train_after_split
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
@@ -227,10 +229,10 @@ class DataModelComp:
             correct = torch.cat([correct, batch_correct], 0)
             num_correct += batch_correct.sum()
 
-        avg_loss = total_loss / num_train
-        acc = num_correct / num_train
+        avg_loss = total_loss / num_train_after_split
+        acc = num_correct / num_train_after_split
         print('\nAfter {} iterations, Training set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-            cur_iter, avg_loss, num_correct, num_train, 100. * acc))
+            cur_iter, avg_loss, num_correct, num_train_after_split, 100. * acc))
         print(correct)
 
         return acc, avg_loss, correct
