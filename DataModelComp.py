@@ -8,7 +8,8 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
-from fileio import save_fine_path_bitmaps
+from fileio import save_fine_path_bitmaps, save_shallow_net
+from models import ShallowNet
 
 
 class DataModelComp:
@@ -18,11 +19,13 @@ class DataModelComp:
     of the model on the dataset, etc.
     """
 
-    def __init__(self, model, batch_size=100, test_batch_size=10000, epochs=10,
+    def __init__(self, model, batch_size=100, test_batch_size=100, epochs=10,
                  lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
-                 num_train_after_split=None, save_interval=None, save_every_epoch=False,
-                 train_val_split_seed=0, bootstrap=False, early_stopping=False, early_stopping_num_wait=10):
+                 num_train_after_split=None, save_interval=None,
+                 save_bitmaps_every_epoch=False, save_model_every_epoch=False,
+                 train_val_split_seed=0, bootstrap=False, early_stopping=False,
+                 save_all_at_end=True, early_stopping_num_wait=10):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -38,9 +41,11 @@ class DataModelComp:
         self.num_train_after_split = num_train_after_split
         self.train_val_split_seed = train_val_split_seed
         self.bootstrap = bootstrap
-        self.save_every_epoch = save_every_epoch
+        self.save_bitmaps_every_epoch = save_bitmaps_every_epoch
+        self.save_model_every_epoch = save_model_every_epoch
         self.early_stopping = early_stopping
         self.early_stopping_num_wait = early_stopping_num_wait
+        self.save_all_at_end = save_all_at_end
 
         if self.cuda:
             print('Using CUDA')
@@ -163,11 +168,11 @@ class DataModelComp:
                 self.num_saved_iters += 1
 
     def train(self, epochs=None, eval_path=False):
-        print("Learning rate: {}, momentum: {}, number of training examples: {}"
-              .format(self.lr, self.momentum, self.num_train_after_split))
+        print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
+              .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs))
         if eval_path:
-            _, _, train_bitmap = self.evaluate_train(0)
-            _, _, test_bitmap = self.evaluate_test(0)
+            _, _, train_bitmap = self.evaluate(0, type=0)
+            _, _, test_bitmap = self.evaluate(0, type=2)
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
         if epochs is None:
@@ -179,46 +184,60 @@ class DataModelComp:
 
             # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs)
             if self.early_stopping and epoch % epochs_per_val == 0:
-                val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
+                val_acc, _, _ = self.evaluate(epoch, type=1)
                 if len(last_val_accs) == self.early_stopping_num_wait and val_acc < last_val_accs[0]:
                     break
                 last_val_accs.append(val_acc)
-                self.evaluate_train(self.num_train_after_split * epoch)
+                self.evaluate(epoch, type=0)
 
             if eval_path:
-                train_bitmap, _, test_bitmap = self.get_bitmaps(self.num_train_after_split * epoch)
+                train_bitmap, _, test_bitmap = self.get_bitmaps(epoch)
                 train_seq.append(train_bitmap)
                 test_seq.append(test_bitmap)
 
-            if self.save_every_epoch:
-                bitmaps = self.get_bitmaps(self.num_train_after_split * epoch)
+            if self.save_bitmaps_every_epoch:
+                bitmaps = self.get_bitmaps(epoch)
                 for i, bitmap in enumerate(bitmaps):
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, epoch, i)
 
+            if self.save_model_every_epoch:
+                save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)  # TODO: implement saving for other models
+
+        if self.save_all_at_end:
+            bitmaps = self.get_bitmaps(epoch)
+            for i, bitmap in enumerate(bitmaps):
+                save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                       self.run_i, 0, i)
+            save_shallow_net(self.model, self.model.num_hidden, self.run_i)
+
         if eval_path:
             return train_seq, test_seq
-        val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
-        print("Training complete!!")
+        val_acc, _, _ = self.evaluate(epoch, type=1)
+
+        if isinstance(self.model, ShallowNet):
+            print('Training complete!! For hidden size = {}'.format(self.model.num_hidden))
+        else:
+            print('Training complete!!')
+
         return val_acc, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
 
     # Returns bitmaps on training, validation and test data
-    def get_bitmaps(self, cur_iter):
-        _, _, train_bitmap = self.evaluate_train(cur_iter)
-        _, _, val_bitmap = self.evaluate_val(cur_iter)
-        _, _, test_bitmap = self.evaluate_test(cur_iter)
-        return train_bitmap, val_bitmap, test_bitmap
+    def get_bitmaps(self, cur_epochs):
+        return [self.evaluate(cur_epochs, type=i)[2] for i in range(3)]
 
-    # TODO: combine next 3 functions into 1
-    def evaluate_train(self, cur_iter):
+    def evaluate(self, cur_epochs, type):
         self.model.eval()
-        num_train_after_split = self.num_train_after_split
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
-        for data, target in self.train_loader:
+
+        num_to_evaluate_on = [self.num_train_after_split, self.num_val, len(self.test_loader.dataset)][type]
+        data_loader = [self.train_loader, self.val_loader, self.test_loader][type]
+
+        for data, target in data_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
@@ -229,59 +248,10 @@ class DataModelComp:
             correct = torch.cat([correct, batch_correct], 0)
             num_correct += batch_correct.sum()
 
-        avg_loss = total_loss / num_train_after_split
-        acc = num_correct / num_train_after_split
-        print('\nAfter {} iterations, Training set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-            cur_iter, avg_loss, num_correct, num_train_after_split, 100. * acc))
-        print(correct)
-
-        return acc, avg_loss, correct
-
-    def evaluate_val(self, cur_iter):
-        self.model.eval()
-        num_val = self.num_val
-        total_loss = 0
-        num_correct = 0
-        correct = torch.FloatTensor(0, 1)
-        for data, target in self.val_loader:
-            if self.cuda:
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
-            correct = torch.cat([correct, batch_correct], 0)
-            num_correct += batch_correct.sum()
-
-        avg_loss = total_loss / num_val
-        acc = num_correct / num_val
-        print('\nAfter {} iterations, Validation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-            cur_iter, avg_loss, num_correct, num_val, 100. * acc))
-        print(correct)
-
-        return acc, avg_loss, correct
-
-    def evaluate_test(self, cur_iter):
-        self.model.eval()
-        num_test = len(self.test_loader.dataset)
-        total_loss = 0
-        num_correct = 0
-        correct = torch.FloatTensor(0, 1)
-        for data, target in self.test_loader:
-            if self.cuda:
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
-            correct = torch.cat([correct, batch_correct], 0)
-            num_correct += batch_correct.sum()
-
-        avg_loss = total_loss / num_test
-        acc = num_correct / num_test
-        print('\nAfter {} iterations, Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-            cur_iter, avg_loss, num_correct, num_test, 100. * acc))
+        avg_loss = total_loss / num_to_evaluate_on
+        acc = num_correct / num_to_evaluate_on
+        print('\nAfter {} epochs ({} iterations), {} set: Average loss: {:.4f},Accuracy: {}/{} ({:.2f}%)\n'.format(cur_epochs,
+              self.num_train_after_split * cur_epochs, ['Training', 'Validation', 'Test'][type],
+              avg_loss, num_correct, num_to_evaluate_on, 100. * acc))
 
         return acc, avg_loss, correct
