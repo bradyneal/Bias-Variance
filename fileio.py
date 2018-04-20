@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import os
 import torch
 import getpass
+from models import ShallowNet
 
 USERNAME = getpass.getuser()
 OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
@@ -21,7 +22,7 @@ FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITM
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
          FINE_PATH_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
-COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
+COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
 TO_CPU_DEFAULT = False
@@ -36,11 +37,23 @@ def make_all_dirs():
 
 make_all_dirs()
 
+
+def get_slurm_id():
+    return os.environ["SLURM_JOB_ID"]
+
+
 """Specific saving functions"""
 
 
-def save_model(model, num_hidden, i, slurm_id):
-    return torch.save(model, get_model_path(num_hidden, i, slurm_id))
+def save_shallow_net(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    if isinstance(model, ShallowNet):
+        return save_model(model, model.num_hidden, i, slurm_id, inter)
+    else:
+        raise Exception('Naming convention for saving model not implemented for models other than ShallowNet')
+
+
+def save_model(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    return torch.save(model, get_model_path(num_hidden, i, slurm_id, inter))
 
 
 def save_weights(weights, num_hidden, i, slurm_id):
@@ -60,14 +73,13 @@ def save_opt_path_bitmaps(opt_path, num_hidden, i, slurm_id):
 
 
 def save_fine_path_bitmaps(bitmap, num_hidden, i, inter, type):
-    slurm_id = os.environ["SLURM_JOB_ID"]
-    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id, type))
+    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, get_slurm_id(), type))
 
 """Specific loading functions"""
 
 
-def load_model(num_hidden, i, slurm_id):
-    return load_torch(get_model_path(num_hidden, i, slurm_id))
+def load_model(num_hidden, i, slurm_id, inter=0):
+    return load_torch(get_model_path(num_hidden, i, slurm_id, inter))
 
 
 def load_weights(num_hidden, i, slurm_id):
@@ -164,8 +176,8 @@ Functions that return the path for a specific directory
 """
 
 
-def get_model_path(num_hidden, i, slurm_id):
-    return get_path(MODEL_DIR, num_hidden, i, slurm_id)
+def get_model_path(num_hidden, i, slurm_id, inter=0):
+    return get_path(MODEL_DIR, num_hidden, i, slurm_id, inter)
 
 
 def get_weight_path(num_hidden, i, slurm_id):
@@ -192,16 +204,16 @@ def get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id,
                         'shallow{}_run{}_inter{}_job{}.pt'.format(num_hidden, i, inter, slurm_id))
 
 
-def get_path(directory, num_hidden, i, slurm_id):
+def get_path(directory, num_hidden, i, slurm_id, inter=0):
     """Get path of a file in a specific directory"""
-    return os.path.join(directory, get_filename(num_hidden, i, slurm_id))
+    return os.path.join(directory, get_filename(num_hidden, i, slurm_id, inter))
 
 
-def get_filename(num_hidden, i, slurm_id):
+def get_filename(num_hidden, i, slurm_id, inter=0):
     """
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
-    return COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+    return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
 
 
 def get_train_test_modifiers(modifier=None):
