@@ -58,10 +58,17 @@ class DataModelComp:
 
         # Create network and optimizer
         self.model = model
+        if torch.cuda.device_count() > 1:
+            print('Using all {} GPUs'.format(torch.cuda.device_count()))
+            self.wrapped_model = nn.DataParallel(self.model)
+        else:
+            self.wrapped_model = self.model
+
         if self.cuda:
-            self.model.cuda()
+            self.wrapped_model.cuda()
+
         self.optimizer = optim.SGD(self.model.parameters(), lr=lr,
-                                   momentum=momentum)
+                                   momentum=momentum)  # CHECK if this should be wrapped_model
         if decay:
             self.scheduler = optim.lr_scheduler.StepLR(
                 self.optimizer, step_size=step_size, gamma=gamma)
@@ -145,13 +152,13 @@ class DataModelComp:
     def train_step(self, epoch=1):
         if self.decay:
             self.scheduler.step()
-        self.model.train()
+        self.wrapped_model.train()
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             self.optimizer.zero_grad()
-            output = self.model(data)
+            output = self.wrapped_model(data)
             loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
@@ -229,7 +236,7 @@ class DataModelComp:
         return [self.evaluate(cur_epochs, type=i)[2] for i in range(3)]
 
     def evaluate(self, cur_epochs, type):
-        self.model.eval()
+        self.wrapped_model.eval()
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
@@ -241,7 +248,7 @@ class DataModelComp:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
+            output = self.wrapped_model(data)
             total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
