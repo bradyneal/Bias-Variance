@@ -90,6 +90,8 @@ class ExampleNet(nn_custom_super):
 
 CIFAR10_D = 3*784
 CIFAR10_K = 10
+
+
 class ShallowNetCIFAR10(nn_custom_super):
     """Shallow neural network for CIFAR10"""
     def __init__(self, num_hidden):
@@ -153,29 +155,25 @@ class InceptionCIFAR10(nn_custom_super):
     def __init__(self, use_batch_norm=True):
         super(InceptionCIFAR10, self).__init__()
         self.use_batch_norm = use_batch_norm
-        self.conv1 = nn.Conv2d(3, 96, kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(96)
+        self.conv1 = ConvModule(3, 96, kernel_size=3, stride=1, padding=1, use_batch_norm=self.use_batch_norm)
 
-        self.incp1 = InceptionModule(96, 32, 32)
-        self.incp2 = InceptionModule(64, 32, 48)
-        self.downsample1 = DownSampleModule(80, 80)
+        self.incp1 = InceptionModule(96, 32, 32, use_batch_norm=self.use_batch_norm)
+        self.incp2 = InceptionModule(64, 32, 48, use_batch_norm=self.use_batch_norm)
+        self.downsample1 = DownSampleModule(80, 80, use_batch_norm=self.use_batch_norm)
 
-        self.incp3 = InceptionModule(160, 112, 48)
-        self.incp4 = InceptionModule(160, 96, 64)
-        self.incp5 = InceptionModule(160, 80, 80)
-        self.incp6 = InceptionModule(160, 48, 96)
-        self.downsample2 = DownSampleModule(144, 96)
+        self.incp3 = InceptionModule(160, 112, 48, use_batch_norm=self.use_batch_norm)
+        self.incp4 = InceptionModule(160, 96, 64, use_batch_norm=self.use_batch_norm)
+        self.incp5 = InceptionModule(160, 80, 80, use_batch_norm=self.use_batch_norm)
+        self.incp6 = InceptionModule(160, 48, 96, use_batch_norm=self.use_batch_norm)
+        self.downsample2 = DownSampleModule(144, 96, use_batch_norm=self.use_batch_norm)
 
-        self.incp7 = InceptionModule(240, 176, 160)
-        self.incp8 = InceptionModule(336, 176, 160)
+        self.incp7 = InceptionModule(240, 176, 160, use_batch_norm=self.use_batch_norm)
+        self.incp8 = InceptionModule(336, 176, 160, use_batch_norm=self.use_batch_norm)
         self.avgpool = nn.AvgPool2d(kernel_size=7)
         self.fc = nn.Linear(336, 10)
 
     def forward(self, x):
-        h1 = self.conv1(x)
-        if self.use_batch_norm:
-            h1 = self.bn1(h1)
-        h1 = F.relu(h1, inplace=True)
+        h1 = self.conv1.forward(x)
 
         h2 = self.incp1.forward(h1)
         h3 = self.incp2.forward(h2)
@@ -193,30 +191,52 @@ class InceptionCIFAR10(nn_custom_super):
         out = self.fc(h12.squeeze())
         return F.log_softmax(out)
 
+    def get_weight_norm(self):
+        sum = 0
+        for p in self.state_dict():
+            sum += self.state_dict()[p].sum()
+        return sum
+
+
+class ConvModule(nn.Module):
+    #  Conv model from fig 3
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, use_batch_norm):
+        super(ConvModule, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.use_batch_norm = use_batch_norm
+
+    def forward(self, x):
+        h = self.conv(x)
+        if self.use_batch_norm:
+            h = self.bn(h)
+        h = F.relu(h, inplace=True)
+        return h
+
 
 class InceptionModule(nn.Module):
     #  Inception model from fig 3
-    def __init__(self, in_channels, ch1, ch3):
+    def __init__(self, in_channels, ch1, ch3, use_batch_norm):
         super(InceptionModule, self).__init__()
-        self.branch1x1 = nn.Conv2d(in_channels, ch1, kernel_size=1, padding=0)
-        self.branch3x3 = nn.Conv2d(in_channels, ch3, kernel_size=3, padding=1)
+        self.branch1x1 = ConvModule(in_channels, ch1, kernel_size=1, stride=1, padding=0, use_batch_norm=use_batch_norm)
+        self.branch3x3 = ConvModule(in_channels, ch3, kernel_size=3, stride=1, padding=1, use_batch_norm=use_batch_norm)
 
     def forward(self, x):
-        branch1x1 = self.branch1x1(x)
-        branch3x3 = self.branch3x3(x)
+        branch1x1 = self.branch1x1.forward(x)
+        branch3x3 = self.branch3x3.forward(x)
         outputs = [branch1x1, branch3x3]
         return torch.cat(outputs, 1)
 
 
 class DownSampleModule(nn.Module):
     #  Downsample model from fig 3
-    def __init__(self, in_channels, ch3):
+    def __init__(self, in_channels, ch3, use_batch_norm):
         super(DownSampleModule, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, ch3, kernel_size=3, stride=2, padding=1)
+        self.conv = ConvModule(in_channels, ch3, kernel_size=3, stride=2, padding=1, use_batch_norm=use_batch_norm)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
     def forward(self, x):
-        branchconv = self.conv1(x)
+        branchconv = self.conv.forward(x)
         branchpool = self.maxpool(x)
         outputs = [branchconv, branchpool]
         return torch.cat(outputs, 1)

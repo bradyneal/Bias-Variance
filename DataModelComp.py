@@ -138,25 +138,6 @@ class DataModelComp:
 
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
-
-        # TODO: fix this
-        # else:
-        #     combined = torch.utils.data.ConcatDataset([train, test])
-        #     num_train = len(train)
-        #     n = len(combined)
-        #     indices = list(range(n))
-        #
-        #     np.random.seed(split_random_seed)
-        #     np.random.shuffle(indices)
-        #
-        #     train_idx, test_idx = indices[:num_train], indices[num_train:]
-        #     train_sampler = SubsetSequentialSampler(train_idx)
-        #     test_sampler = SubsetSequentialSampler(test_idx)
-        #
-        #     train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
-        #                                                sampler=train_sampler, **kwargs)
-        #     test_loader = torch.utils.data.DataLoader(combined, batch_size=self.test_batch_size,
-        #                                               sampler=test_sampler, **kwargs)
         return train_loader, val_loader, test_loader
 
     def train_step(self, epoch=1):
@@ -165,13 +146,16 @@ class DataModelComp:
             #print(self.scheduler.get_lr())
 
         self.model.train()
-        train_losses = []
+        steps = 0
         for batch_idx, (data, target) in enumerate(self.train_loader):
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
             self.optimizer.zero_grad()
             output = self.model(data)
+
+            #print('norm of weights: {}'.format(self.model.get_weight_norm()))
+
             loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
@@ -186,11 +170,12 @@ class DataModelComp:
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, self.num_saved_iters, i)
                 self.num_saved_iters += 1
-            train_losses.append(loss.data[0])
-        return train_losses
+            steps += 1
+        return steps
 
-    def train(self, epochs=None, eval_path=False, early_stopping=True):
-        train_losses = []
+    def train(self, epochs=None, eval_path=False, early_stopping=True, train_to_overfit=False, eval_train_every=False):
+        steps = 0
+        train_loss_to_return = []
         print("Learning rate: {}, momentum: {}, number of training examples: {}"
               .format(self.lr, self.momentum, self.num_train_after_split))
         if eval_path:
@@ -203,17 +188,42 @@ class DataModelComp:
         epochs_per_val = (self.num_train - self.num_val) // self.num_train_after_split  # Number of epochs adjusted for the training size TODO: adjust for the batch size
         last_val_accs = deque(maxlen=10)
         for epoch in range(1, epochs + 1):
-            epoch_train_losses = self.train_step(epoch)
-            train_losses.extend(epoch_train_losses)
+            step = self.train_step(epoch)
+            steps += step
+
+            if eval_train_every:
+                acc, avg_loss, correct = self.evaluate_train(cur_iter=steps)
+                train_loss_to_return.append(avg_loss)
 
             if early_stopping:
-                # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs) TODO: introduce option for this
+                # Implements early stoppping and logs accuracies on train and val sets (early stopping done when
+                # validation accuracy has not improved in 10 consecutive epochs)
                 if epoch % epochs_per_val == 0:
                     val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
                     if len(last_val_accs) == 10 and val_acc < last_val_accs[0]:  # TODO: make 10 a parameter
                         break
                     last_val_accs.append(val_acc)
                     self.evaluate_train(self.num_train_after_split * epoch)
+
+            if train_to_overfit:
+                # check if likely to be over by evaluating first batch only
+                for data, target in self.train_loader:
+                    if self.cuda:
+                        data, target = data.cuda(), target.cuda()
+                    data, target = Variable(data, volatile=True), Variable(target)
+                    output = self.model(data)
+                    pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
+                    batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
+                    num_correct = batch_correct.sum()
+                    break
+
+                if num_correct/data.shape[0] >= train_to_overfit:
+                    _, _, train_bitmap = self.evaluate_train(epoch)
+                    print('current train accuracy: {}'.format(train_bitmap.mean()))
+                    if train_bitmap.mean() >= train_to_overfit:
+                        break
+                else:
+                    print('current train accuracy (roughly): {}'.format(num_correct/data.shape[0]))
 
             if eval_path:
                 train_bitmap, _, test_bitmap = self.get_bitmaps(self.num_train_after_split * epoch)
@@ -231,7 +241,10 @@ class DataModelComp:
 
         val_acc, _, _ = self.evaluate_val(self.num_train_after_split * epoch)
         print("Training complete!!")
-        return val_acc, self.num_train_after_split * epoch, train_losses
+        if eval_train_every:
+            return val_acc, self.num_train_after_split * epoch, steps, train_loss_to_return
+        else:
+            return val_acc, self.num_train_after_split * epoch, steps
 
         # Return no of iterations - epoch * k / batch_size
 
