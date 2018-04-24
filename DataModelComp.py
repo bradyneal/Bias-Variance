@@ -171,8 +171,8 @@ class DataModelComp:
         print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
               .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs))
         if eval_path:
-            _, _, train_bitmap = self.evaluate(0, type=0)
-            _, _, test_bitmap = self.evaluate(0, type=2)
+            train_bitmap = self.evaluate(0, type=0)[2]
+            test_bitmap = self.evaluate(0, type=2)[2]
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
         if epochs is None:
@@ -184,7 +184,7 @@ class DataModelComp:
 
             # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs)
             if self.early_stopping and epoch % epochs_per_val == 0:
-                val_acc, _, _ = self.evaluate(epoch, type=1)
+                val_acc = self.evaluate(epoch, type=1)[0]
                 if len(last_val_accs) == self.early_stopping_num_wait and val_acc < last_val_accs[0]:
                     break
                 last_val_accs.append(val_acc)
@@ -213,7 +213,7 @@ class DataModelComp:
 
         if eval_path:
             return train_seq, test_seq
-        val_acc, _, _ = self.evaluate(epoch, type=1)
+        val_acc = self.evaluate(epoch, type=1)[0]
 
         if isinstance(self.model, ShallowNet):
             print('Training complete!! For hidden size = {}'.format(self.model.num_hidden))
