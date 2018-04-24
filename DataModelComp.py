@@ -224,15 +224,20 @@ class DataModelComp:
 
         # Return no of iterations - epoch * k / batch_size
 
+    def load_saved_shallow_net(self, num_hidden, run_i, slurm_id, inter=0):
+        r"""To be used instead of train when loading a trained model"""
+        self.model = load_shallow_net(num_hidden, run_i, slurm_id, inter)
+
     # Returns bitmaps on training, validation and test data
     def get_bitmaps(self, cur_epochs):
         return [self.evaluate(cur_epochs, type=i)[2] for i in range(3)]
 
-    def evaluate(self, cur_epochs, type):
+    def evaluate(self, cur_epochs, type, probs_required=False):
         self.model.eval()
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
+        probs = None
 
         num_to_evaluate_on = [self.num_train_after_split, self.num_val, len(self.test_loader.dataset)][type]
         data_loader = [self.train_loader, self.val_loader, self.test_loader][type]
@@ -241,11 +246,16 @@ class DataModelComp:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            prob = self.model(data)
+            total_loss += F.nll_loss(prob, target, size_average=False).data[0]  # sum up batch loss
+            pred = prob.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)
+            if probs_required:
+                if probs is None:
+                    probs = prob.data
+                else:
+                    probs = torch.cat([probs, prob.data], 0)
             num_correct += batch_correct.sum()
 
         avg_loss = total_loss / num_to_evaluate_on
@@ -254,4 +264,7 @@ class DataModelComp:
               self.num_train_after_split * cur_epochs, ['Training', 'Validation', 'Test'][type],
               avg_loss, num_correct, num_to_evaluate_on, 100. * acc))
 
-        return acc, avg_loss, correct
+        if probs_required:
+            return acc, avg_loss, correct, probs
+        else:
+            return acc, avg_loss, correct
