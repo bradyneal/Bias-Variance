@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import os
 import torch
 import getpass
+import pickle
 from models import ShallowNet
 
 USERNAME = getpass.getuser()
@@ -13,6 +14,7 @@ OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
+DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
 BITMAP_DIRS = ['train_bitmaps', 'val_bitmaps', 'test_bitmaps']
 WEIGHT_DIR = os.path.join(SAVED_DIR, 'weights')
 PAIRWISE_DISTS_DIR = os.path.join(SAVED_DIR, 'pairwise_dists')
@@ -43,6 +45,11 @@ def get_slurm_id():
 
 
 """Specific saving functions"""
+
+
+def save_data_model_comp(data_model_comp_obj, slurm_id=get_slurm_id(), inter=0):
+    data_model_comp_path = get_data_model_comp_path(data_model_comp_obj.model.num_hidden, data_model_comp_obj.run_i, slurm_id, inter)
+    pickle.dump(data_model_comp_obj, open(data_model_comp_path, 'wb'))
 
 
 def save_shallow_net(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
@@ -76,6 +83,14 @@ def save_fine_path_bitmaps(bitmap, num_hidden, i, inter, type):
     return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, get_slurm_id(), type))
 
 """Specific loading functions"""
+
+
+def load_data_model_comp(num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    return pickle.load(open(get_data_model_comp_path(num_hidden, i, slurm_id, inter), 'rb'))
+
+
+def load_shallow_net(num_hidden, i, slurm_id, inter=0):
+    return load_model(num_hidden, i, slurm_id, inter)
 
 
 def load_model(num_hidden, i, slurm_id, inter=0):
@@ -112,7 +127,7 @@ def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
         try:
             return torch.load(filename)
         # likely CUDA error from saving it from GPU and loading to CPU
-        except RuntimeError as e:
+        except RuntimeError:
             return load_to_cpu(filename)
 
 
@@ -174,6 +189,10 @@ def load_model_information():
 """
 Functions that return the path for a specific directory
 """
+
+
+def get_data_model_comp_path(num_hidden, i, slurm_id, inter=0):
+    return get_path(DATA_MODEL_COMP_DIR, num_hidden, i, slurm_id, inter)
 
 
 def get_model_path(num_hidden, i, slurm_id, inter=0):

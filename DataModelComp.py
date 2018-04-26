@@ -8,7 +8,8 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
-from fileio import save_fine_path_bitmaps, save_shallow_net
+
+from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp
 from models import ShallowNet
 
 
@@ -25,7 +26,7 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  save_bitmaps_every_epoch=False, save_model_every_epoch=False,
                  train_val_split_seed=0, bootstrap=False, early_stopping=False,
-                 save_all_at_end=True, early_stopping_num_wait=10):
+                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=True):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -46,6 +47,7 @@ class DataModelComp:
         self.early_stopping = early_stopping
         self.early_stopping_num_wait = early_stopping_num_wait
         self.save_all_at_end = save_all_at_end
+        self.save_obj = save_obj
 
         if self.cuda:
             print('Using CUDA')
@@ -75,6 +77,9 @@ class DataModelComp:
             for i, bitmap in enumerate(bitmaps):
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                        self.run_i, 0, i)
+
+        if self.save_obj:
+            save_data_model_comp(self)
 
     def get_data_loaders(self, same_dist=False):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
