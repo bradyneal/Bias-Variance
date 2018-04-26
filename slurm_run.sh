@@ -7,4 +7,4 @@ echo Running on $HOSTNAME
 
 source activate inf-path
 
-python $1
+python run.py
