@@ -26,7 +26,8 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  save_bitmaps_every_epoch=False, save_model_every_epoch=False,
                  train_val_split_seed=0, bootstrap=False, early_stopping=False,
-                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=True):
+                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=True,
+                 print_train_and_validation_errors=False):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -48,6 +49,8 @@ class DataModelComp:
         self.early_stopping_num_wait = early_stopping_num_wait
         self.save_all_at_end = save_all_at_end
         self.save_obj = save_obj
+        self.print_train_and_validation_errors = print_train_and_validation_errors
+        self.errors = [[], [], []]
 
         if self.cuda:
             print('Using CUDA')
@@ -155,10 +158,15 @@ class DataModelComp:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
-            self.optimizer.zero_grad()
-            output = self.model(data)
-            loss = F.nll_loss(output, target)
-            loss.backward()
+            if self.batch_size % 100:
+                raise Exception('Implement when batch size is not a multiple of 100')
+            for i in range(0, self.batch_size//100):
+                data_partial = data[i * 100 : (i+1) * 100]
+                target_partial = target[i * 100 : (i+1) * 100]
+                self.optimizer.zero_grad()
+                output = self.model(data_partial)
+                loss = F.nll_loss(output, target_partial)
+                loss.backward()
             self.optimizer.step()
 
             if self.log_interval is not None and batch_idx % self.log_interval == 0:
@@ -205,6 +213,10 @@ class DataModelComp:
                 for i, bitmap in enumerate(bitmaps):
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, epoch, i)
+
+            if self.print_train_and_validation_errors:
+                for i in range(3):
+                    self.errors[i].append(self.evaluate(epoch, type=i)[0])
 
             if self.save_model_every_epoch:
                 save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)  # TODO: implement saving for other models
