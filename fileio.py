@@ -22,7 +22,7 @@ PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITMAP_DIRS]
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
-         FINE_PATH_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
+         FINE_PATH_DIR, DATA_MODEL_COMP_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
