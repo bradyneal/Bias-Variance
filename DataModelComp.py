@@ -26,8 +26,8 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  save_bitmaps_every_epoch=False, save_model_every_epoch=False,
                  train_val_split_seed=0, bootstrap=False, early_stopping=False,
-                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=True,
-                 print_train_and_validation_errors=False):
+                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=False,
+                 print_all_errors=False, print_only_train_and_val_errors=False):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -48,9 +48,9 @@ class DataModelComp:
         self.early_stopping = early_stopping
         self.early_stopping_num_wait = early_stopping_num_wait
         self.save_all_at_end = save_all_at_end
-        self.save_obj = save_obj
-        self.print_train_and_validation_errors = print_train_and_validation_errors
-        self.errors = [[], [], []]
+        self.print_all_errors = print_all_errors
+        self.print_only_train_and_val_errors = print_only_train_and_val_errors
+        self.accuracies = [[], [], []]
 
         if self.cuda:
             print('Using CUDA')
@@ -100,21 +100,23 @@ class DataModelComp:
         np.random.seed(self.train_val_split_seed)
 
         num_train_before_split = len(train)
-        num_val = len(train) // 5
 
         self.num_train_before_split = num_train_before_split
-        self.num_val = num_val
 
         if self.num_train_after_split is None:
-            self.num_train_after_split = num_train_before_split - num_val
+            self.num_val = self.num_train_before_split // 5
+            self.num_train_after_split = num_train_before_split - self.num_val
 
-        if num_val + self.num_train_after_split > num_train_before_split:
+        else:
+            self.num_val = self.num_train_after_split
+
+        if self.num_val + self.num_train_after_split > num_train_before_split:
             print("k must be less than %d (number of training examples = %d"
                   " - number of validation examples = %d)" %
-                  (num_train_before_split-num_val, num_train_before_split, num_val))
+                  (num_train_before_split-self.num_val, num_train_before_split, self.num_val))
             raise Exception
 
-        train_and_val_idxs = np.random.choice(num_train_before_split, num_val+self.num_train_after_split,
+        train_and_val_idxs = np.random.choice(num_train_before_split, self.num_val+self.num_train_after_split,
                                               replace=False)
         train_idxs = train_and_val_idxs[:self.num_train_after_split]
         if self.bootstrap:
@@ -143,7 +145,7 @@ class DataModelComp:
         #     np.random.shuffle(indices)
         #
         #     train_idx, test_idx = indices[:num_train], indices[num_train:]
-        #     train_sampler = SubsetSequentialSampler(train_idx)
+        #     train_sampler = SubsetSequentialSampler(train_idx)jjk
         #     test_sampler = SubsetSequentialSampler(test_idx)
         #
         #     train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
@@ -163,8 +165,8 @@ class DataModelComp:
             if self.batch_size % 100:
                 raise Exception('Implement when batch size is not a multiple of 100')
             for i in range(0, self.batch_size//100):
-                data_partial = data[i * 100 : (i+1) * 100]
-                target_partial = target[i * 100 : (i+1) * 100]
+                data_partial = data[i * 100: (i+1) * 100]
+                target_partial = target[i * 100: (i+1) * 100]
                 self.optimizer.zero_grad()
                 output = self.model(data_partial)
                 loss = F.nll_loss(output, target_partial)
@@ -191,9 +193,12 @@ class DataModelComp:
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
         if epochs is None:
-            epochs = self.epochs * self.num_train_before_split // self.num_train_after_split
+            epochs = self.epochs
         epochs_per_val = (self.num_train_before_split - self.num_val) // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
         last_val_accs = deque(maxlen=10)
+
+        reached_zero_training_error = False
+
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
 
@@ -216,9 +221,22 @@ class DataModelComp:
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, epoch, i)
 
-            if self.print_train_and_validation_errors:
+            if self.print_all_errors:
                 for i in range(3):
-                    self.errors[i].append(self.evaluate(epoch, type=i)[0])
+                    self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
+
+            if self.print_only_train_and_val_errors:
+                for i in range(2):
+                    self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
+
+            if self.print_all_errors or self.print_only_train_and_val_errors:
+                if self.accuracies[0][-1] == 1 and not reached_zero_training_error:
+                    reached_zero_training_error = True
+                    bitmaps = self.get_bitmaps(epoch)
+                    for i, bitmap in enumerate(bitmaps):
+                        save_fine_path_bitmaps(bitmap, self.model.num_hidden,
+                                               self.run_i, -1, i)
+                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-1)
 
             if self.save_model_every_epoch:
                 save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)  # TODO: implement saving for other models
