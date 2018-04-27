@@ -51,6 +51,7 @@ class DataModelComp:
         self.print_all_errors = print_all_errors
         self.print_only_train_and_val_errors = print_only_train_and_val_errors
         self.accuracies = [[], [], []]
+        self.save_obj = save_obj
 
         if self.cuda:
             print('Using CUDA')
