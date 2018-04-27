@@ -164,10 +164,11 @@ class DataModelComp:
             data, target = Variable(data), Variable(target)
             if self.batch_size % 100:
                 raise Exception('Implement when batch size is not a multiple of 100')
+            
+            self.optimizer.zero_grad()
             for i in range(0, self.batch_size//100):
-                data_partial = data[i * 100: (i+1) * 100]
-                target_partial = target[i * 100: (i+1) * 100]
-                self.optimizer.zero_grad()
+                data_partial = data[i * 100 : (i+1) * 100]
+                target_partial = target[i * 100 : (i+1) * 100]
                 output = self.model(data_partial)
                 loss = F.nll_loss(output, target_partial)
                 loss.backward()
