@@ -61,11 +61,13 @@ class DataModelComp:
             if self.cuda:
                 torch.cuda.manual_seed(seed)
 
+        self.lr /= (self.batch_size // 100)
+
         # Create network and optimizer
         self.model = model
         if self.cuda:
             self.model.cuda()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=lr,
+        self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr,
                                    momentum=momentum)
         if decay:
             self.scheduler = optim.lr_scheduler.StepLR(
