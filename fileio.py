@@ -24,6 +24,7 @@ FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITM
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
          FINE_PATH_DIR, DATA_MODEL_COMP_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
+OLD_COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
@@ -232,7 +233,9 @@ def get_filename(num_hidden, i, slurm_id, inter=0):
     """
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
-    return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
+    if int(slurm_id) > 161000:
+        return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
+    return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
 
 
 def get_train_test_modifiers(modifier=None):
