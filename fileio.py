@@ -219,11 +219,8 @@ def get_opt_path_bitmaps_path(num_hidden, i, slurm_id):
 def get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id,
                                type  # 0 for train, 1 for validation, 2 for test
                                ):
-    if int(slurm_id) > 161000:
-        return os.path.join(FINE_PATH_DIRS[type],
-            'shallow{}_run{}_inter{}_job{}.pt'.format(num_hidden, i, inter, slurm_id))
     return os.path.join(FINE_PATH_DIRS[type],
-        'shallow{}_run{}_job{}.pt'.format(num_hidden, i, slurm_id))
+        'shallow{}_run{}_inter{}_job{}.pt'.format(num_hidden, i, inter, slurm_id))
 
 
 def get_path(directory, num_hidden, i, slurm_id, inter=0):
