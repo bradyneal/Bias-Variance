@@ -22,7 +22,7 @@ class DataModelComp:
                  lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
                  num_train_after_split=None, save_interval=None, save_every_epoch=False,
-                 train_val_split_seed=0, bootstrap=False, data='MNIST', corruption=0):
+                 train_val_split_seed=0, bootstrap=False, data='MNIST', corruption=0, to_exclude=0):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -41,6 +41,7 @@ class DataModelComp:
         self.save_every_epoch = save_every_epoch
         self.data = data
         self.corruption = corruption
+        self.to_exclude = to_exclude
 
         if self.cuda:
             print('Using CUDA')
@@ -63,7 +64,7 @@ class DataModelComp:
 
         # Load data
         self.train_loader, self.val_loader, self.test_loader = \
-            self.get_data_loaders(data=self.data, corruption=self.corruption)
+            self.get_data_loaders(data=self.data)
 
         # Save initial bitmaps
         if self.save_interval is not None:
@@ -72,7 +73,7 @@ class DataModelComp:
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                        self.run_i, 0, i)
 
-    def get_data_loaders(self, same_dist=False, data='MNIST', corruption=0):
+    def get_data_loaders(self, same_dist=False, data='MNIST'):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
 
         if data == 'MNIST':
@@ -119,8 +120,11 @@ class DataModelComp:
         train_and_val_idxs = np.random.choice(num_train, num_val+self.num_train_after_split,
                                               replace=False)
         train_idxs = train_and_val_idxs[:self.num_train_after_split]
+        #  further reduce by factor of to_exclude (does same if bootstrapping)
+        train_idxs = train_idxs[int(self.to_exclude * self.num_train_after_split):]
         if self.bootstrap:
             train_idxs = np.random.choice(train_idxs, self.num_train_after_split, replace=True)
+            train_idxs = train_idxs[int(self.to_exclude * self.num_train_after_split):]
         val_idxs = train_and_val_idxs[self.num_train_after_split:]
 
         train_sampler = SubsetSequentialSampler(train_idxs)
