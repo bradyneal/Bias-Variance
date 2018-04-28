@@ -27,7 +27,8 @@ class DataModelComp:
                  save_bitmaps_every_epoch=False, save_model_every_epoch=False,
                  train_val_split_seed=0, bootstrap=False, early_stopping=False,
                  save_all_at_end=True, early_stopping_num_wait=10, save_obj=False,
-                 print_all_errors=False, print_only_train_and_val_errors=False):
+                 print_all_errors=False, print_only_train_and_val_errors=False,
+                 size_of_one_pass=None):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -52,6 +53,7 @@ class DataModelComp:
         self.print_only_train_and_val_errors = print_only_train_and_val_errors
         self.accuracies = [[], [], []]
         self.save_obj = save_obj
+        self.size_of_one_pass = size_of_one_pass
 
         if self.cuda:
             print('Using CUDA')
@@ -62,7 +64,14 @@ class DataModelComp:
             if self.cuda:
                 torch.cuda.manual_seed(seed)
 
-        self.lr /= (self.batch_size // 100)
+        # Handle when we want to make multiple passes for a batch size to use
+        # less memory
+        if not self.size_of_one_pass:
+            self.size_of_one_pass = self.batch_size
+        if self.batch_size % self.size_of_one_pass != 0:
+            raise Exception('batch_size should e a mutliple of size_of_one_pass')
+        self.num_passes = self.batch_size // self.size_of_one_pass
+        self.lr /= self.num_passes
 
         # Create network and optimizer
         self.model = model
@@ -163,13 +172,11 @@ class DataModelComp:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
-            if self.batch_size % 100:
-                raise Exception('Implement when batch size is not a multiple of 100')
-            
+
             self.optimizer.zero_grad()
-            for i in range(0, self.batch_size//100):
-                data_partial = data[i * 100 : (i+1) * 100]
-                target_partial = target[i * 100 : (i+1) * 100]
+            for i in range(0, self.num_passes):
+                data_partial = data[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
+                target_partial = target[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
                 output = self.model(data_partial)
                 loss = F.nll_loss(output, target_partial)
                 loss.backward()
