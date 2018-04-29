@@ -5,11 +5,20 @@ from matplotlib import pyplot as plt
 import numpy as np
 import tqdm
 import torch
+import os
 
 run_exp_a = False
 run_exp_b_c = False
 run_exp_d = False
 run_exp_e = True
+
+import getpass
+
+USERNAME = getpass.getuser()
+OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+
+#  Local changes only
+#OUTPUT_DIR = os.path.join(os.getcwd(), 'matt_folder')
 
 #  Learning Curves
 if run_exp_a:
@@ -25,7 +34,7 @@ if run_exp_a:
 
         fig_1.append(train_loss_to_return)
 
-    with open('matt_folder/ZhangRep/fig_a_series', 'wb') as f:
+    with open(OUTPUT_DIR+'/fig_a_series_test', 'wb') as f:
         np.save(file=f, arr=np.array(fig_1))
 
     plt.figure()
@@ -35,7 +44,7 @@ if run_exp_a:
     plt.xlabel('Steps')
     plt.ylabel('Loss')
     plt.legend(loc='upper right')
-    plt.savefig('matt_folder/ZhangRep/result_fig_1')
+    plt.savefig(OUTPUT_DIR+'/result_fig_1')
 
     print('done?')
 
@@ -49,7 +58,7 @@ if run_exp_b_c:
 
     #  Label Corruption
     try:
-        fig_2_3 = np.load('matt_folder/ZhangRep/fig_bc_series')
+        fig_2_3 = np.load(OUTPUT_DIR+'/fig_bc_series')
         print('loaded previous results')
     except:
         fig_2_3 = np.zeros(
@@ -81,12 +90,12 @@ if run_exp_b_c:
                 fig_2_3[i, j, 0] = steps
                 fig_2_3[i, j, 1] = test_error
 
-                with open('matt_folder/ZhangRep/fig_bc_series', 'wb') as f:
+                with open(OUTPUT_DIR+'/fig_bc_series', 'wb') as f:
                     np.save(file=f, arr=fig_2_3)
 
-    with open('matt_folder/ZhangRep/fig_bc_series', 'wb') as f:
+    with open(OUTPUT_DIR+'/fig_bc_series', 'wb') as f:
         np.save(file=f, arr=fig_2_3)
-    with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+    with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
         np.save(file=f, arr=bitmaps)
 
     # plot final results
@@ -103,7 +112,7 @@ if run_exp_b_c:
     plt.xlabel('Label Corruption')
     plt.ylabel('Time to Overfit')
     plt.legend(loc='lower left')
-    plt.savefig('matt_folder/ZhangRep/result_fig_2')
+    plt.savefig(OUTPUT_DIR+'/result_fig_2')
 
     plt.figure()
     plt.title('Generalization Error Growth')
@@ -113,7 +122,7 @@ if run_exp_b_c:
     plt.xlabel('Label Corruption')
     plt.ylabel('Test Error')
     plt.legend(loc='upper left')
-    plt.savefig('matt_folder/ZhangRep/result_fig_3')
+    plt.savefig(OUTPUT_DIR+'/result_fig_3')
 
     print('done?')
 
@@ -126,7 +135,7 @@ if run_exp_d:
     colors = ['blue', 'green', 'black']
 
     try:
-        fig_2_3 = np.load('matt_folder/baseline/fig_bc_series')
+        fig_2_3 = np.load(OUTPUT_DIR+'/fig_bc_series')
         print('loaded previous results')
     except:
         fig_2_3 = np.zeros(
@@ -157,11 +166,11 @@ if run_exp_d:
 
                 fig_2_3[i, j, 0] = steps
                 fig_2_3[i, j, 1] = test_error[0]
-                with open('matt_folder/baseline/fig_bc_series', 'wb') as f:
+                with open(OUTPUT_DIR+'fig_bc_series', 'wb') as f:
                     np.save(file=f, arr=fig_2_3)
                     print('saved up to {} of {}'.format(corr, network))
 
-    with open('matt_folder/baseline/fig_bc_series', 'wb') as f:
+    with open(OUTPUT_DIR+'/fig_bc_series', 'wb') as f:
         np.save(file=f, arr=fig_2_3)
 
     plt.figure()
@@ -172,7 +181,7 @@ if run_exp_d:
     plt.xlabel('Percent of Dataset Removed')
     plt.ylabel('Time to Overfit')
     plt.legend(loc='lower left')
-    plt.savefig('matt_folder/baseline/result_fig_2')
+    plt.savefig(OUTPUT_DIR+'/result_fig_2')
 
     plt.figure()
     plt.title('Generalization Error Growth')
@@ -182,7 +191,7 @@ if run_exp_d:
     plt.xlabel('Percent of Dataset Removed')
     plt.ylabel('Test Error')
     plt.legend(loc='upper left')
-    plt.savefig('matt_folder/baseline/result_fig_3')
+    plt.savefig(OUTPUT_DIR+'/result_fig_3')
 
 
 # Check params
@@ -230,14 +239,14 @@ if run_exp_e:
 
     #  Label Corruption
     try:
-        fig_e = np.load('matt_folder/ZhangRep/fig_e_series')
+        fig_e = np.load(OUTPUT_DIR+'/fig_e_series')
         print('loaded previous results')
     except:
         fig_e = np.zeros(
             shape=(num_runs, len(corruption_list), 2))  # 3 diff networks x 11 levels of corruption x time to overfit
 
     try:
-        all_bitmaps = np.load('matt_folder/ZhangRep/bitmaps')
+        all_bitmaps = np.load(OUTPUT_DIR+'/bitmaps')
         print('loaded previous results')
     except:
         all_bitmaps = np.zeros(
@@ -268,13 +277,13 @@ if run_exp_e:
                 fig_e[i, j, 1] = test_error
                 all_bitmaps[i, j, :] = bitmap.squeeze()
 
-                with open('matt_folder/ZhangRep/fig_e_series', 'wb') as f:
+                with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
                     np.save(file=f, arr=fig_e)
-                with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+                with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
                     np.save(file=f, arr=all_bitmaps)
                     print('saved up to {} of run {}'.format(corr, i))
 
-    with open('matt_folder/ZhangRep/fig_e_series', 'wb') as f:
+    with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
         np.save(file=f, arr=fig_e)
-    with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+    with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
         np.save(file=f, arr=all_bitmaps)

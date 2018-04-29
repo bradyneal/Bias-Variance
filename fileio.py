@@ -7,7 +7,7 @@ import os
 import torch
 import getpass
 
-USERNAME = getpass.getuser()
+#USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 #  Local changes only
 OUTPUT_DIR = os.path.join(os.getcwd(), 'save_info')
