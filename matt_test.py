@@ -1,12 +1,15 @@
 from DataModelComp import DataModelComp
 from models import ShallowNetCIFAR10, ThreeLayerNetCIFAR10, AlexNetCIFAR10, InceptionCIFAR10
+from variance import calculate_variance
 from matplotlib import pyplot as plt
 import numpy as np
 import tqdm
+import torch
 
 run_exp_a = False
 run_exp_b_c = False
 run_exp_d = False
+run_exp_e = True
 
 #  Learning Curves
 if run_exp_a:
@@ -50,10 +53,11 @@ if run_exp_b_c:
         print('loaded previous results')
     except:
         fig_2_3 = np.zeros(
-            shape=(3, 11, 2))  # 3 diff networks x 11 levels of corruption x time to overfit OR test error
+            shape=(3, 11, 2))  # 3 diff networks x 11 levels of corruption x time to overfit
 
     for i, network in enumerate(network_names):
         print('computing for: {} ...'.format(network))
+        bitmaps = torch.FloatTensor(0, 1)
         for j, corr in tqdm.tqdm(enumerate(corruption_list)):
             if not (fig_2_3[i, j] == [0, 0]).all():
                 print('alread computed! skipping ...')
@@ -72,16 +76,22 @@ if run_exp_b_c:
                 _, _, steps = data_model_comp.train(eval_path=False, early_stopping=False,
                                                     train_to_overfit=label_corruption_threshold[i],
                                                     eval_train_every=False)
-                test_error = data_model_comp.evaluate_test(cur_iter=1)
+                test_error, _, _ = data_model_comp.evaluate_test(cur_iter=1)
 
                 fig_2_3[i, j, 0] = steps
-                fig_2_3[i, j, 1] = test_error[0]
+                fig_2_3[i, j, 1] = test_error
+
                 with open('matt_folder/ZhangRep/fig_bc_series', 'wb') as f:
                     np.save(file=f, arr=fig_2_3)
-                    print('saved up to {} of {}'.format(corr, network))
 
     with open('matt_folder/ZhangRep/fig_bc_series', 'wb') as f:
         np.save(file=f, arr=fig_2_3)
+    with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+        np.save(file=f, arr=bitmaps)
+
+    # plot final results
+    mean = torch.mean(bitmaps, 1)
+    variance = calculate_variance(bitmaps, mean)
 
     # to load run: results = np.load(file='matt_folder/fig_bc_series')
 
@@ -185,7 +195,7 @@ def get_weights(net):
     print('total weights: {}'.format(total_weights))
 
 
-
+"""
 # check how values match up
 Zhang = np.load('matt_folder/ZhangRep/fig_bc_series')
 Baseline = np.load('matt_folder/baseline/fig_bc_series')
@@ -208,3 +218,63 @@ plt.xlabel('Percent of Dataset Removed')
 plt.ylabel('Test Error')
 plt.legend(loc='lower right')
 plt.savefig('matt_folder/baseline/compare_vals')
+"""
+
+if run_exp_e:
+    lr_list = [0.01, 0.01, 0.1]
+    corruption_list = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+    label_corruption_threshold = [39998.0 / 40000, 0.9982, 39998.0 / 40000]  # paper uses [1, 0.9982, 1]
+    network_names = ['3 Layer MLP']
+    colors = ['blue']
+    num_runs = 30
+
+    #  Label Corruption
+    try:
+        fig_e = np.load('matt_folder/ZhangRep/fig_e_series')
+        print('loaded previous results')
+    except:
+        fig_e = np.zeros(
+            shape=(num_runs, len(corruption_list), 2))  # 3 diff networks x 11 levels of corruption x time to overfit
+
+    try:
+        all_bitmaps = np.load('matt_folder/ZhangRep/bitmaps')
+        print('loaded previous results')
+    except:
+        all_bitmaps = np.zeros(
+            shape=(num_runs, len(corruption_list), 10000))  # 3 diff networks x 11 levels of corruption x bitmap len
+        all_bitmaps += 11                 # 11 = no sample!
+
+    for i in tqdm.tqdm(range(num_runs)):
+        print('computing for run {} ...'.format(i))
+        bitmaps = torch.FloatTensor(0, 1)
+        for j, corr in tqdm.tqdm(enumerate(corruption_list)):
+            if not (fig_e[i, j] == [0, 0]).all():
+                print('alread computed! skipping ...')
+            else:
+                net = ThreeLayerNetCIFAR10(num_hidden=512)
+
+                data_model_comp = DataModelComp(net, batch_size=128, test_batch_size=128, epochs=200,
+                                                lr=lr_list[0], decay=True, step_size=1, gamma=0.95, momentum=0.9,
+                                                no_cuda=False, seed=i+2018, log_interval=1000,
+                                                run_i=i, save_interval=None, data='CIFAR10', corruption=corr)
+                _, _, steps = data_model_comp.train(eval_path=False, early_stopping=False,
+                                                    train_to_overfit=label_corruption_threshold[0],
+                                                    eval_train_every=False)
+                test_error, _, bitmap = data_model_comp.evaluate_test(cur_iter=1)
+
+                #bitmaps = torch.cat((bitmaps, bitmap), 1)
+
+                fig_e[i, j, 0] = steps
+                fig_e[i, j, 1] = test_error
+                all_bitmaps[i, j, :] = bitmap.squeeze()
+
+                with open('matt_folder/ZhangRep/fig_e_series', 'wb') as f:
+                    np.save(file=f, arr=fig_e)
+                with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+                    np.save(file=f, arr=all_bitmaps)
+                    print('saved up to {} of run {}'.format(corr, i))
+
+    with open('matt_folder/ZhangRep/fig_e_series', 'wb') as f:
+        np.save(file=f, arr=fig_e)
+    with open('matt_folder/ZhangRep/bitmaps', 'wb') as f:
+        np.save(file=f, arr=all_bitmaps)

@@ -10,7 +10,6 @@ from collections import deque
 from torchextra import SubsetSequentialSampler
 from fileio import save_fine_path_bitmaps
 
-
 class DataModelComp:
     """
     Class that is the abstraction of a dataset and model. It holds the methods
@@ -278,9 +277,8 @@ class DataModelComp:
 
         avg_loss = total_loss / num_train
         acc = num_correct / num_train
-        print('After {} iterations, Training set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
-            cur_iter, avg_loss, num_correct, num_train, 100. * acc))
-        #print(correct)
+        print('After {} iterations, Training set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'
+              .format(cur_iter, avg_loss, num_correct, num_train, 100. * acc))
 
         return acc, avg_loss, correct
 

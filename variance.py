@@ -20,7 +20,7 @@ def find_last_epoch_when_saving_every_epoch(num_hidden, seed, type):  # TODO: ad
     return i
 
 def calculate_variance(bitmaps, mean):
-    return torch.mean((bitmaps - mean) ** 2)
+    return torch.mean((bitmaps - mean.unsqueeze(0)) ** 2)
 
 def get_variances(num_hidden_arr, slurm_id):
     variances = []
