@@ -141,6 +141,7 @@ class DataModelComp:
 
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
+
         return train_loader, val_loader, test_loader
 
     def train_step(self, epoch=1):
