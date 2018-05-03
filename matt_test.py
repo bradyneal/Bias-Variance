@@ -12,13 +12,13 @@ run_exp_b_c = False
 run_exp_d = False
 run_exp_e = True
 
-#import getpass
+import getpass
 
-#USERNAME = getpass.getuser()
-#OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+USERNAME = getpass.getuser()
+OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
 #  Local changes only
-OUTPUT_DIR = os.path.join(os.getcwd(), '/matt_folder')
+#OUTPUT_DIR = os.path.join(os.getcwd(), '/matt_folder')
 
 #  Learning Curves
 if run_exp_a:

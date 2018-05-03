@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-export HOME=`getent passwd $USER | cut -d':' -f6`
-source ~/.bashrc
+# Source bashrc
+source $HOME/.bashrc
 export PYTHONUNBUFFERED=1
-source activate inf-path
 echo Running on $HOSTNAME
 
+# Run the script
 python matt_test.py
