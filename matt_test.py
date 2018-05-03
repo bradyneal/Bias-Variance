@@ -3,7 +3,6 @@ from models import ShallowNetCIFAR10, ThreeLayerNetCIFAR10, AlexNetCIFAR10, Ince
 from variance import calculate_variance
 from matplotlib import pyplot as plt
 import numpy as np
-import tqdm
 import torch
 import os
 
@@ -67,7 +66,7 @@ if run_exp_b_c:
     for i, network in enumerate(network_names):
         print('computing for: {} ...'.format(network))
         bitmaps = torch.FloatTensor(0, 1)
-        for j, corr in tqdm.tqdm(enumerate(corruption_list)):
+        for j, corr in enumerate(corruption_list):
             if not (fig_2_3[i, j] == [0, 0]).all():
                 print('alread computed! skipping ...')
             else:
@@ -143,7 +142,7 @@ if run_exp_d:
 
     for i, network in enumerate(network_names):
         print('computing for: {} ...'.format(network))
-        for j, corr in tqdm.tqdm(enumerate(size_list)):
+        for j, corr in enumerate(size_list):
             if not (fig_2_3[i, j] == [0, 0]).all():
                 print('alread computed! skipping ...')
             else:
@@ -253,10 +252,10 @@ if run_exp_e:
             shape=(num_runs, len(corruption_list), 10000))  # 3 diff networks x 11 levels of corruption x bitmap len
         all_bitmaps += 11                 # 11 = no sample!
 
-    for i in tqdm.tqdm(range(num_runs)):
+    for i in range(num_runs):
         print('computing for run {} ...'.format(i))
         bitmaps = torch.FloatTensor(0, 1)
-        for j, corr in tqdm.tqdm(enumerate(corruption_list)):
+        for j, corr in enumerate(corruption_list):
             if not (fig_e[i, j] == [0, 0]).all():
                 print('alread computed! skipping ...')
             else:
