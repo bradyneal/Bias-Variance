@@ -22,6 +22,12 @@ class nn_custom_super(nn.Module):
         """Return parameters of the neural network as a vector"""
         return torch.cat([p.data.view(-1) for p in self.parameters()], dim=0)
 
+    def forward(self, x):
+        raise NotImplementedError()
+
+    def get_weight_norms(self, p=2):
+        raise NotImplementedError()
+
 
 class Linear(nn_custom_super):
     """Linear classifier"""
