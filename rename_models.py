@@ -1,3 +1,5 @@
+# To run, import copy function and call it with required arguments
+
 import os
 import re
 from shutil import copy2
@@ -23,8 +25,3 @@ def copy(old_slurm_id, new_slurm_id, load_user_id, saved_user_id):
             print(new_file_path)
 
             copy2(old_file_path, new_file_path)
-
-
-copy(167017, 167011, 'nealbray', 'nealbray')
-copy(166435, 165143, 'nealbray', 'nealbray')
-copy(166437, 165151, 'nealbray', 'nealbray')
