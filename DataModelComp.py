@@ -272,7 +272,14 @@ class DataModelComp:
 
     def load_saved_shallow_net(self, num_hidden, run_i, slurm_id, inter=0):
         r"""To be used instead of train when loading a trained model"""
-        self.model = load_shallow_net(num_hidden, run_i, slurm_id, inter)
+        try:
+            self.model = load_shallow_net(num_hidden, run_i, slurm_id, inter)
+        except OSError as e:
+            if isinstance(e, FileNotFoundError):
+                print("Using inter 0 instead for num_hidden:", num_hidden)
+                self.model = load_shallow_net(num_hidden, run_i, slurm_id, 0)
+            else:
+                raise e
 
     # Returns bitmaps on training, validation and test data
     def get_bitmaps(self, cur_epochs):
