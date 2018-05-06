@@ -24,11 +24,9 @@ class DataModelComp:
                  lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
                  num_train_after_split=None, save_interval=None,
-                 save_bitmaps_every_epoch=False, save_model_every_epoch=False,
-                 train_val_split_seed=0, bootstrap=False, early_stopping=False,
-                 save_all_at_end=True, early_stopping_num_wait=10, save_obj=False,
+                 train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
-                 size_of_one_pass=None):
+                 size_of_one_pass=None, save_model="all"):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -44,11 +42,7 @@ class DataModelComp:
         self.num_train_after_split = num_train_after_split
         self.train_val_split_seed = train_val_split_seed
         self.bootstrap = bootstrap
-        self.save_bitmaps_every_epoch = save_bitmaps_every_epoch
-        self.save_model_every_epoch = save_model_every_epoch
-        self.early_stopping = early_stopping
-        self.early_stopping_num_wait = early_stopping_num_wait
-        self.save_all_at_end = save_all_at_end
+        self.save_model = save_model
         self.print_all_errors = print_all_errors
         self.print_only_train_and_val_errors = print_only_train_and_val_errors
         self.accuracies = [[], [], []]
@@ -203,58 +197,34 @@ class DataModelComp:
             test_seq = [test_bitmap]
         if epochs is None:
             epochs = self.epochs
-        epochs_per_val = (self.num_train_before_split - self.num_val) // self.num_train_after_split  # Mumber of epochs adjusted for the training size TODO: adjust for the batch size
-        last_val_accs = deque(maxlen=10)
 
+        best_val_accuracy = 0
         reached_zero_training_error = False
 
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
 
-            # Implements early stoppping and logs accuracies on train and val sets (early stopping done when validation accuracy has not improved in 10 consecutive epochs)
-            if self.early_stopping and epoch % epochs_per_val == 0:
-                val_acc = self.evaluate(epoch, type=1)[0]
-                if len(last_val_accs) == self.early_stopping_num_wait and val_acc < last_val_accs[0]:
-                    break
-                last_val_accs.append(val_acc)
-                self.evaluate(epoch, type=0)
-
-            if eval_path:
-                train_bitmap, _, test_bitmap = self.get_bitmaps(epoch)
-                train_seq.append(train_bitmap)
-                test_seq.append(test_bitmap)
-
-            if self.save_bitmaps_every_epoch:
-                bitmaps = self.get_bitmaps(epoch)
-                for i, bitmap in enumerate(bitmaps):
-                    save_fine_path_bitmaps(bitmap, self.model.num_hidden,
-                                           self.run_i, epoch, i)
-
-            if self.print_all_errors:
-                for i in range(3):
-                    self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
-
-            if self.print_only_train_and_val_errors:
+            if self.print_only_train_and_val_errors or self.print_all_errors:
                 for i in range(2):
                     self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
+
+                # Saves best model so far
+                if self.accuracies[1][-1] > best_val_accuracy:
+                    best_val_accuracy = self.accuracies[1][-1]
+                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-2)
+
+            if self.print_all_errors:
+                self.accuracies[2].append(self.evaluate(epoch, type=2)[0])
 
             if self.print_all_errors or self.print_only_train_and_val_errors:
                 if self.accuracies[0][-1] == 1 and not reached_zero_training_error:
                     reached_zero_training_error = True
-                    bitmaps = self.get_bitmaps(epoch)
-                    for i, bitmap in enumerate(bitmaps):
-                        save_fine_path_bitmaps(bitmap, self.model.num_hidden,
-                                               self.run_i, -1, i)
                     save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-1)
 
-            if self.save_model_every_epoch:
-                save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)  # TODO: implement saving for other models
+            if self.save_model == "every_epoch":
+                save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
 
-        if self.save_all_at_end:
-            bitmaps = self.get_bitmaps(epoch)
-            for i, bitmap in enumerate(bitmaps):
-                save_fine_path_bitmaps(bitmap, self.model.num_hidden,
-                                       self.run_i, 0, i)
+        if self.save_model == "only_end":
             save_shallow_net(self.model, self.model.num_hidden, self.run_i)
 
         if eval_path:
