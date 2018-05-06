@@ -42,7 +42,10 @@ make_all_dirs()
 
 
 def get_slurm_id():
-    return os.environ["SLURM_JOB_ID"]
+    try:
+        return os.environ["SLURM_JOB_ID"]
+    except:
+        return 0
 
 
 """Specific saving functions"""
