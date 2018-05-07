@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser()
 
 # Essential for each experiment
 parser.add_argument('--hidden_arr', nargs='+', type=int, default=[1, 2, 5, 25])
+parser.add_argument('--seed', type=int)
 parser.add_argument('--num_seeds', type=int, default=2)
 
 # Needed for hyperparameter tuning
@@ -42,8 +43,12 @@ if args.print_errors == "train_and_val":
     print_all_errors = False
     print_only_train_and_val_errors = True
 
+if args.seed:
+    seeds = [args.seed]
+else:
+    seeds = range(args.num_seeds)
 
-for seed in range(args.num_seeds):
+for seed in seeds:
     for num_hidden in args.hidden_arr:
         print(DataModelComp(ShallowNet(num_hidden), epochs=args.max_epochs,
             run_i=seed, bootstrap=args.bootstrap, batch_size=args.batch_size,
