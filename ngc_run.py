@@ -43,7 +43,7 @@ if args.print_errors == "train_and_val":
     print_all_errors = False
     print_only_train_and_val_errors = True
 
-if args.seed:
+if args.seed is not None:
     seeds = [args.seed]
 else:
     seeds = range(args.num_seeds)
