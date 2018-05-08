@@ -8,6 +8,7 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
+import matplotlib.pyplot as plt
 
 from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp
 from models import ShallowNet
@@ -187,6 +188,23 @@ class DataModelComp:
                                            self.run_i, self.num_saved_iters, i)
                 self.num_saved_iters += 1
 
+    # def plot_training_curves(self):
+    #     # print val list, best, and last
+    #     x = list(range(self.epochs))
+    #     plt.plot(x, self.accuracies[0])
+    #     plt.plot(x, self.accuracies[1])
+    #     plt.plot(x, self.accuracies[2])
+    #     plt.title('Learning curves')
+    #     plt.xlabel('epochs')
+    #     plt.ylabel('error')
+    #     plt.legend(handles=['train', 'val', 'test'], loc='upper right')
+    #     plt.show()
+    #     plt.savefig('train_curves.jpg')
+        
+    def print_validation_accs(self):
+        print('Validation list:', self.accuracies[1])
+        print('Best and last validation: {}, {}'.format(max(self.accuracies[1]), self.accuracies[1][-1]))
+
     def train(self, epochs=None, eval_path=False):
         print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
               .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs))
@@ -236,29 +254,12 @@ class DataModelComp:
         else:
             print('Training complete!!')
             
-        print_validation_accs()
-        plot_training_curves()
+        self.print_validation_accs()
+        # self.plot_training_curves()
 
         return val_acc, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
-    
-    def plot_training_curves():
-        # print val list, best, and last
-        x = list(range(self.epochs))
-        plt.plot(x, self.accuracies[0])
-        plt.plot(x, self.accuracies[1])
-        plt.plot(x, self.accuracies[2])
-        plt.title('Learning curves')
-        plt.xlabel('epochs')
-        plt.ylabel('error')
-        plt.legend(handles=['train', 'val', 'test'], loc='upper right')
-        plt.show()
-        plt.savefig('train_curves.jpg')
-        
-    def print_validation_accs():
-        print('Validation list:', self.accuracies[1])
-        print('Best and last validation: {}, {}'.format(min(self.accuracies[1]), self.accuracies[1][-1]))
 
     def load_saved_shallow_net(self, num_hidden, run_i, slurm_id, inter=0):
         r"""To be used instead of train when loading a trained model"""
