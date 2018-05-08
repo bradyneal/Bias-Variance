@@ -5,14 +5,13 @@ Module for plotting experimental results
 from __future__ import print_function, division
 import matplotlib.pyplot as plt
 
-# from fileio import load_model, load_train_bitmap, load_test_bitmap, get_train_test_modifiers
-# from infmetrics import hamming_diff
-
-SLURM_ID = 116568
-
 CAPSIZE = 5
+XSCALE_DEF = 'linear'
+YSCALE_DEF = 'linear'
+GRID_DEF = False
 
-def plot_line_with_normal_errbars(x, y, y_std, xlabel=None, ylabel=None, title=None, filename=None, xscale='linear', yscale='linear', grid=False):
+
+def plot_line_with_normal_errbars(x, y, y_std, xlabel=None, ylabel=None, title=None, filename=None, xscale=XSCALE_DEF, yscale=YSCALE_DEF, grid=GRID_DEF):
     '''
     Plot figure with 95% confidence interval, according to Normal distirbution.
     Save figure if filename specified; otherwise, show the figure.
@@ -23,6 +22,11 @@ def plot_line_with_normal_errbars(x, y, y_std, xlabel=None, ylabel=None, title=N
         yerr = 2 * y_std
     plt.figure()
     plt.errorbar(x, y, yerr=yerr, capsize=CAPSIZE)
+    run_fig_extras(xlabel, ylabel, title, filename, xscale, yscale, grid)
+
+
+def run_fig_extras(xlabel=None, ylabel=None, title=None, filename=None, xscale=XSCALE_DEF, yscale=YSCALE_DEF, grid=GRID_DEF):
+    '''Set details about currently opened figure and show or save the figure'''
     if xlabel:
         plt.xlabel(xlabel)
     if ylabel:
@@ -36,25 +40,3 @@ def plot_line_with_normal_errbars(x, y, y_std, xlabel=None, ylabel=None, title=N
         plt.savefig(filename)
     else:
         plt.show()
-
-
-# def load_and_plot_pairwise(hidden_sizes, num_runs, modifier, num_bins):
-#     """Plot pairwise distances in overlayed histograms"""
-#     if not isinstance(hidden_sizes, list):
-#         hidden_sizes = [hidden_sizes]
-#     modifier_train, modifier_test = get_train_test_modifiers(modifier)
-#     print(modifier_train)
-#     
-#     for num_hidden in hidden_sizes:
-#         pairwise_train = load_pairwise_dists(num_hidden, num_runs, modifier_train)
-#         pairwise_test = load_pairwise_dists(num_hidden, num_runs, modifier_test)
-#         
-#         plt.figure('train')
-#         plt.hist(pairwise_train, bins=num_bins)
-#         
-#         plt.figure('test')
-#         plt.hist(pairwise_test, bins=num_bins)
-
-
-if __name__ == '__main__':
-    load_and_plot_pairwise([5, 10, 15, 25, 50, 100, 250, 500], 20, 'hammdiffp2', 20)
