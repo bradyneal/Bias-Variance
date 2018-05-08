@@ -15,10 +15,10 @@ parser.add_argument('--momentum', type=float, default=0.9)
 
 # Parameters for different experiments
 parser.add_argument('--batch_size', type=int, default=100)
-parser.add_argument('--size_of_one_pass', type=int, default=100)
+parser.add_argument('--size_of_one_pass', type=int)
 parser.add_argument('--variance_over', choices=["all", "initialization", "sampling"], default="all")
 parser.add_argument('--num_train_after_split', type=int)
-parser.add_argument('--bootstrap', action="store_true", default=False)
+parser.add_argument('--bootstrap', action="store_true", default=True)
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
 
