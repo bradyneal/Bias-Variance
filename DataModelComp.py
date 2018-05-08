@@ -9,8 +9,9 @@ import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
 import matplotlib.pyplot as plt
+import os
 
-from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp
+from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp, SAVED_DIR
 from models import ShallowNet
 
 
@@ -27,7 +28,7 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
-                 size_of_one_pass=None, save_model="all"):
+                 size_of_one_pass=None, plot_curves=False, save_model="all"):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -49,6 +50,7 @@ class DataModelComp:
         self.accuracies = [[], [], []]
         self.save_obj = save_obj
         self.size_of_one_pass = size_of_one_pass
+        self.plot_curves = plot_curves
 
         if self.cuda:
             print('Using CUDA')
@@ -188,18 +190,16 @@ class DataModelComp:
                                            self.run_i, self.num_saved_iters, i)
                 self.num_saved_iters += 1
 
-    # def plot_training_curves(self):
-    #     # print val list, best, and last
-    #     x = list(range(self.epochs))
-    #     plt.plot(x, self.accuracies[0])
-    #     plt.plot(x, self.accuracies[1])
-    #     plt.plot(x, self.accuracies[2])
-    #     plt.title('Learning curves')
-    #     plt.xlabel('epochs')
-    #     plt.ylabel('error')
-    #     plt.legend(handles=['train', 'val', 'test'], loc='upper right')
-    #     plt.show()
-    #     plt.savefig('train_curves.jpg')
+    def plot_training_curves(self):
+        x = list(range(self.epochs))
+        plt.plot(x, [1 - acc for acc in self.accuracies[0]])
+        plt.plot(x, [1 - acc for acc in self.accuracies[1]])
+        plt.plot(x, [1 - acc for acc in self.accuracies[2]])
+        plt.title('Learning curves')
+        plt.xlabel('epochs')
+        plt.ylabel('error')
+        plt.legend(['train', 'val', 'test'], loc='upper right')
+        plt.savefig(os.path.join(SAVED_DIR, 'train_curves.jpg'))
         
     def print_validation_accs(self):
         print('Validation list:', self.accuracies[1])
@@ -256,7 +256,8 @@ class DataModelComp:
             print('Training complete!!')
             
         self.print_validation_accs()
-        # self.plot_training_curves()
+        if self.plot_curves:
+            self.plot_training_curves()
 
         return val_acc, self.num_train_after_split * epoch
 
