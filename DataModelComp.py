@@ -203,7 +203,8 @@ class DataModelComp:
         
     def print_validation_accs(self):
         print('Validation list:', self.accuracies[1])
-        print('Best and last validation: {}, {}'.format(max(self.accuracies[1]), self.accuracies[1][-1]))
+        print('Best validation acc:', max(self.accuracies[1]))
+        print('Last validation acc:', self.accuracies[1][-1])
 
     def train(self, epochs=None, eval_path=False):
         print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
