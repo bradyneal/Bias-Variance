@@ -1,7 +1,5 @@
-echo "Here"
-echo "$@"
-
 cmd="python3 ngc_run.py $@"
+echo $cmd
 
 ngc batch run \
   --instance ngcv1 \
