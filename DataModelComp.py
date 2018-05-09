@@ -66,7 +66,7 @@ class DataModelComp:
         if not self.size_of_one_pass:
             self.size_of_one_pass = self.batch_size
         if self.batch_size % self.size_of_one_pass != 0:
-            raise Exception('batch_size should e a mutliple of size_of_one_pass')
+            raise Exception('batch_size should be a mutliple of size_of_one_pass')
         self.num_passes = self.batch_size // self.size_of_one_pass
         self.lr /= self.num_passes
 
