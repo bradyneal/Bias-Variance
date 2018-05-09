@@ -11,6 +11,7 @@ from math import sqrt
 from DataModelComp import DataModelComp
 from fileio import load_fine_path_bitmaps
 from models import ShallowNet
+from scipy.stats import chi2
 plt.switch_backend('agg')
 
 
@@ -181,3 +182,13 @@ class Variance:
         file_name = '{}.npy'.format(self.slurm_id)
         np.save(dir_name+file_name, variances)
         return variances
+
+    def get_conf_int(self, variance, conf_perc=.95):
+        '''
+        Return tuple (lower, upper) of confidence interval for variance.
+
+        Assumption: random variables are independent
+        (which is, of course, not true in the learning setting)
+        '''
+        return chi2.interval(alpha=conf_perc, df=self.num_seeds-1,
+                             scale=variance/self.num_seeds)
