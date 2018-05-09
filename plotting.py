@@ -4,6 +4,7 @@ Module for plotting experimental results
 
 from __future__ import print_function, division
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 CAPSIZE = 5
 XSCALE_DEF = 'linear'
@@ -40,3 +41,4 @@ def run_fig_extras(xlabel=None, ylabel=None, title=None, filename=None, xscale=X
         plt.savefig(filename)
     else:
         plt.show()
+    plt.close()

@@ -3,7 +3,7 @@ Module for parsing functions
 '''
 
 BEST_VAL_MARK = 'Best validation acc:'
-LAST_VAL_MARK = 'Validation list:'
+LAST_VAL_MARK = 'Last validation acc:'
 VAL_LIST_MARK = 'Validation list:'
 
 def parse_validations(filename):
