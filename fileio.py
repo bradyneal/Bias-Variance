@@ -15,6 +15,7 @@ OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
+HYPERPARAM_DIR = os.path.join(SAVED_DIR, 'hyperparam')
 BITMAP_DIRS = ['train_bitmaps', 'val_bitmaps', 'test_bitmaps']
 WEIGHT_DIR = os.path.join(SAVED_DIR, 'weights')
 PAIRWISE_DISTS_DIR = os.path.join(SAVED_DIR, 'pairwise_dists')
@@ -22,7 +23,7 @@ PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITMAP_DIRS]
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
-         FINE_PATH_DIR, DATA_MODEL_COMP_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
+         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
 OLD_COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
@@ -193,6 +194,14 @@ def load_model_information():
 """
 Functions that return the path for a specific directory
 """
+
+
+def get_hyperparam_main_plot_path(first_job_id):
+    return os.path.join(HYPERPARAM_DIR, 'job{}.jpg'.format(first_job_id))
+
+
+def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):
+    return os.path.join(HYPERPARAM_DIR, 'shallow{}_option{}_job{}.jpg'.format(num_hidden, option, first_job_id))
 
 
 def get_data_model_comp_path(num_hidden, i, slurm_id, inter=0):
