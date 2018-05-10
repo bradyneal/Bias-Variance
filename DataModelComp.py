@@ -75,14 +75,17 @@ class DataModelComp:
         if self.cuda:
             self.model.cuda()
 
-		if optimizer == "sgd":
-			self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=momentum)
+        if optimizer == "sgd":
+            self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=momentum)
+            self.comp_closure = False
         elif optimizer == "adam":
-        	self.optimizer = optim.adam(self.model.parameters(), lr=self.lr, beta1=beta1, beta2=beta2)
-        elf optimizer == "lbfgs":
-        	self.optimizer = optim.lbfgs(self.model.parameters(), lr=self.lr, max_iter=max_iter, max_eval=max_eval, history_size=history_size) # Note: this doesn't perform line search!
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, beta1=beta1, beta2=beta2)
+            self.comp_closure = False
+        elif optimizer == "lbfgs":
+            self.optimizer = optim.LBFGS(self.model.parameters(), lr=self.lr, max_iter=max_iter, max_eval=max_eval, history_size=history_size) # Note: this doesn't perform line search!
+            self.comp_closure = True
         else:
-        	print("invalid optimizer!")
+            print("invalid optimizer!")
 
         if decay:
             self.scheduler = optim.lr_scheduler.StepLR(
@@ -182,10 +185,21 @@ class DataModelComp:
             for i in range(0, self.num_passes):
                 data_partial = data[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
                 target_partial = target[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
+
+            if self.comp_closure:
+                def close_fun():
+                    self.optimizer.zero_grad()
+                    output = self.model(data_partial)
+                    loss = F.nll_loss(output, target_partial)
+                    loss.backward()
+                    return loss
+
+                self.optimizer.step(closure=close_fun)
+            else:
                 output = self.model(data_partial)
                 loss = F.nll_loss(output, target_partial)
                 loss.backward()
-            self.optimizer.step()
+                self.optimizer.step()
 
             if self.log_interval is not None and batch_idx % self.log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
