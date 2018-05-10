@@ -6,18 +6,18 @@ import numpy as np
 import torch
 import os
 
-run_exp_a = False
+run_exp_a = True
 run_exp_b_c = False
 run_exp_d = False
-run_exp_e = True
+run_exp_e = False
 
 import getpass
 
-USERNAME = getpass.getuser()
-OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+#USERNAME = getpass.getuser()
+#OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
 #  Local changes only
-#OUTPUT_DIR = os.path.join(os.getcwd(), '/matt_folder')
+OUTPUT_DIR = os.path.join(os.getcwd(), '/matt_folder')
 
 #  Learning Curves
 if run_exp_a:
