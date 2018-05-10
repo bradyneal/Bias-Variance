@@ -196,8 +196,8 @@ Functions that return the path for a specific directory
 """
 
 
-def get_hyperparam_main_plot_path(first_job_id):
-    return os.path.join(HYPERPARAM_DIR, 'job{}.jpg'.format(first_job_id))
+def get_hyperparam_main_plot_path(first_job_id, option):
+    return os.path.join(HYPERPARAM_DIR, '{}_job{}.jpg'.format(option, first_job_id))
 
 
 def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):

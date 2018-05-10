@@ -28,7 +28,8 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
-                 size_of_one_pass=None, plot_curves=False, save_model="all"):
+                 size_of_one_pass=None, plot_curves=False,
+                 save_model="only_end", save_best_model=False):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -51,6 +52,7 @@ class DataModelComp:
         self.save_obj = save_obj
         self.size_of_one_pass = size_of_one_pass
         self.plot_curves = plot_curves
+        self.save_best_model = save_best_model
 
         if self.cuda:
             print('Using CUDA')
@@ -140,25 +142,6 @@ class DataModelComp:
 
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
-
-        # TODO: fix this
-        # else:
-        #     combined = torch.utils.data.ConcatDataset([train, test])
-        #     num_train = len(train)
-        #     n = len(combined)
-        #     indices = list(range(n))
-        #
-        #     np.random.seed(split_random_seed)
-        #     np.random.shuffle(indices)
-        #
-        #     train_idx, test_idx = indices[:num_train], indices[num_train:]
-        #     train_sampler = SubsetSequentialSampler(train_idx)jjk
-        #     test_sampler = SubsetSequentialSampler(test_idx)
-        #
-        #     train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
-        #                                                sampler=train_sampler, **kwargs)
-        #     test_loader = torch.utils.data.DataLoader(combined, batch_size=self.test_batch_size,
-        #                                               sampler=test_sampler, **kwargs)
         return train_loader, val_loader, test_loader
 
     def train_step(self, epoch=1):
@@ -200,7 +183,7 @@ class DataModelComp:
         plt.ylabel('error')
         plt.legend(['train', 'val', 'test'], loc='upper right')
         plt.savefig(os.path.join(SAVED_DIR, 'train_curves.jpg'))
-        
+
     def print_validation_accs(self):
         print('Validation list:', self.accuracies[1])
         print('Best validation acc:', max(self.accuracies[1]))
@@ -218,7 +201,6 @@ class DataModelComp:
             epochs = self.epochs
 
         best_val_accuracy = 0
-        reached_zero_training_error = False
 
         for epoch in range(1, epochs + 1):
             self.train_step(epoch)
@@ -228,17 +210,12 @@ class DataModelComp:
                     self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
 
                 # Saves best model so far
-                if self.accuracies[1][-1] > best_val_accuracy:
+                if self.save_best_model and self.accuracies[1][-1] > best_val_accuracy:
                     best_val_accuracy = self.accuracies[1][-1]
                     save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-2)
 
             if self.print_all_errors:
                 self.accuracies[2].append(self.evaluate(epoch, type=2)[0])
-
-            if self.print_all_errors or self.print_only_train_and_val_errors:
-                if self.accuracies[0][-1] == 1 and not reached_zero_training_error:
-                    reached_zero_training_error = True
-                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-1)
 
             if self.save_model == "every_epoch":
                 save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
@@ -254,7 +231,7 @@ class DataModelComp:
             print('Training complete!! For hidden size = {}'.format(self.model.num_hidden))
         else:
             print('Training complete!!')
-            
+
         self.print_validation_accs()
         if self.plot_curves:
             self.plot_training_curves()
