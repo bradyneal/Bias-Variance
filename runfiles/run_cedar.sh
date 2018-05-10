@@ -7,4 +7,4 @@ export PYTHONUNBUFFERED=1
 echo Running on $HOSTNAME
 
 # Run the script
-python matt_test.py
+python information-paths/matt_test.py
