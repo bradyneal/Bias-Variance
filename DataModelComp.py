@@ -28,7 +28,7 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
-                 size_of_one_pass=None, plot_curves=False, save_model="all"):
+                 size_of_one_pass=None, plot_curves=False, save_model="all", optimizer="sgd", beta=0.9, beta2=0.99, max_iter=20, max_eval=1.25*20, history_size=100):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -74,8 +74,16 @@ class DataModelComp:
         self.model = model
         if self.cuda:
             self.model.cuda()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr,
-                                   momentum=momentum)
+
+		if optimizer == "sgd":
+			self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=momentum)
+        elif optimizer == "adam":
+        	self.optimizer = optim.adam(self.model.parameters(), lr=self.lr, beta1=beta1, beta2=beta2)
+        elf optimizer == "lbfgs":
+        	self.optimizer = optim.lbfgs(self.model.parameters(), lr=self.lr, max_iter=max_iter, max_eval=max_eval, history_size=history_size) # Note: this doesn't perform line search!
+        else:
+        	print("invalid optimizer!")
+
         if decay:
             self.scheduler = optim.lr_scheduler.StepLR(
                 self.optimizer, step_size=step_size, gamma=gamma)
