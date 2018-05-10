@@ -6,12 +6,12 @@ import numpy as np
 import torch
 import os
 
-run_exp_a = True
+run_exp_a = False
 run_exp_b_c = False
 run_exp_d = False
-run_exp_e = False
+run_exp_e = True
 
-import getpass
+#import getpass
 
 #USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
@@ -234,7 +234,7 @@ if run_exp_e:
     label_corruption_threshold = [39998.0 / 40000, 0.9982, 39998.0 / 40000]  # paper uses [1, 0.9982, 1]
     network_names = ['3 Layer MLP']
     colors = ['blue']
-    num_runs = 30
+    num_runs = 10
 
     #  Label Corruption
     try:
@@ -254,35 +254,37 @@ if run_exp_e:
 
     for i in range(num_runs):
         print('computing for run {} ...'.format(i))
-        bitmaps = torch.FloatTensor(0, 1)
+        #bitmaps = torch.FloatTensor(0, 1)
         for j, corr in enumerate(corruption_list):
             if not (fig_e[i, j] == [0, 0]).all():
                 print('alread computed! skipping ...')
             else:
                 net = ThreeLayerNetCIFAR10(num_hidden=512)
 
-                data_model_comp = DataModelComp(net, batch_size=128, test_batch_size=128, epochs=200,
+                data_model_comp = DataModelComp(net, batch_size=128, test_batch_size=128, epochs=1,
                                                 lr=lr_list[0], decay=True, step_size=1, gamma=0.95, momentum=0.9,
                                                 no_cuda=False, seed=i+2018, log_interval=1000,
                                                 run_i=i, save_interval=None, data='CIFAR10', corruption=corr)
                 _, _, steps = data_model_comp.train(eval_path=False, early_stopping=False,
                                                     train_to_overfit=label_corruption_threshold[0],
                                                     eval_train_every=False)
-                test_error, _, bitmap = data_model_comp.evaluate_test(cur_iter=1)
+                #test_error, _, bitmap = data_model_comp.evaluate_test(cur_iter=1)
 
                 #bitmaps = torch.cat((bitmaps, bitmap), 1)
 
-                fig_e[i, j, 0] = steps
-                fig_e[i, j, 1] = test_error
-                all_bitmaps[i, j, :] = bitmap.squeeze()
+                #fig_e[i, j, 0] = steps
+                #fig_e[i, j, 1] = test_error
+                #all_bitmaps[i, j, :] = bitmap.squeeze()
 
-                with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
-                    np.save(file=f, arr=fig_e)
-                with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
-                    np.save(file=f, arr=all_bitmaps)
-                    print('saved up to {} of run {}'.format(corr, i))
+                #with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
+                #    np.save(file=f, arr=fig_e)
+                #with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
+                #    np.save(file=f, arr=all_bitmaps)
+                state = {'state': net.state_dict()}
+                torch.save(state, f='matt_folder/model-corr-{}run-{}.pt'.format(corr, j))
+                print('saved up to {} of run {}'.format(corr, i))
 
-    with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
-        np.save(file=f, arr=fig_e)
-    with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
-        np.save(file=f, arr=all_bitmaps)
+    #with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
+    #    np.save(file=f, arr=fig_e)
+    #with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
+    #    np.save(file=f, arr=all_bitmaps)
