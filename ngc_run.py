@@ -18,15 +18,16 @@ parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--size_of_one_pass', type=int)
 parser.add_argument('--variance_over', choices=["all", "initialization", "sampling"], default="all")
 parser.add_argument('--num_train_after_split', type=int)
-parser.add_argument('--bootstrap', action="store_true", default=True)
+parser.add_argument('--no_bootstrap', action="store_true")
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
+parser.add_argument('--save_best_model', action="store_true")
 
 # Default is good almost always
 parser.add_argument('--save_model', choices=["only_end", "every_epoch"], default="only_end")
 
 # Default values are good always
-parser.add_argument('--no_cuda', action="store_true", default=False)
+parser.add_argument('--no_cuda', action="store_true")
 
 # Essentially useless for now
 parser.add_argument('--decay', action="store_true", default=False)
