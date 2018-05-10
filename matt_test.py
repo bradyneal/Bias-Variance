@@ -1,6 +1,5 @@
 from DataModelComp import DataModelComp
 from models import ShallowNetCIFAR10, ThreeLayerNetCIFAR10, AlexNetCIFAR10, InceptionCIFAR10
-from variance import calculate_variance
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -27,9 +26,9 @@ if run_exp_a:
         data_model_comp = DataModelComp(deepish_net, batch_size=128, test_batch_size=128, epochs=60,
                                         lr=0.01, decay=True, step_size=1, gamma=0.95, momentum=0.9,
                                         no_cuda=False, seed=False, log_interval=100,
-                                        run_i=0, save_interval=None, data='CIFAR10', corruption=k)
-        _, _, steps, train_loss_to_return = data_model_comp.train(eval_path=False, early_stopping=False,
-                                                                  eval_train_every=True)
+                                        run_i=0, save_interval=None, data='CIFAR10', corruption=k,
+                                        print_only_train_and_val_errors=True)
+        _, _, steps, train_loss_to_return = data_model_comp.train(eval_path=False)
 
         fig_1.append(train_loss_to_return)
 
@@ -99,7 +98,7 @@ if run_exp_b_c:
 
     # plot final results
     mean = torch.mean(bitmaps, 1)
-    variance = calculate_variance(bitmaps, mean)
+    #variance = calculate_variance(bitmaps, mean)
 
     # to load run: results = np.load(file='matt_folder/fig_bc_series')
 

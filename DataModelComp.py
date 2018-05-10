@@ -8,7 +8,11 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
-from fileio import save_fine_path_bitmaps
+import matplotlib.pyplot as plt
+import os
+
+from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp, SAVED_DIR
+from models import ShallowNet
 
 class DataModelComp:
     """
@@ -17,11 +21,14 @@ class DataModelComp:
     of the model on the dataset, etc.
     """
 
-    def __init__(self, model, batch_size=100, test_batch_size=10000, epochs=10,
+    def __init__(self, model, batch_size=100, test_batch_size=100, epochs=10,
                  lr=0.1, decay=False, step_size=10, gamma=0.1, momentum=0.9,
                  no_cuda=False, seed=False, log_interval=100, run_i=0,
                  num_train_after_split=None, save_interval=None, save_every_epoch=False,
-                 train_val_split_seed=0, bootstrap=False, data='MNIST', corruption=0, to_exclude=0):
+                 train_val_split_seed=0, bootstrap=False, data='MNIST', corruption=0, to_exclude=0,
+                 save_obj=False, print_all_errors=False, print_only_train_and_val_errors=False,
+                 size_of_one_pass=None, plot_curves=False, save_model="all"):
+
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -41,6 +48,13 @@ class DataModelComp:
         self.data = data
         self.corruption = corruption
         self.to_exclude = to_exclude
+        self.save_model = save_model
+        self.print_all_errors = print_all_errors
+        self.print_only_train_and_val_errors = print_only_train_and_val_errors
+        self.accuracies = [[], [], []]
+        self.save_obj = save_obj
+        self.size_of_one_pass = size_of_one_pass
+        self.plot_curves = plot_curves
 
         if self.cuda:
             print('Using CUDA')
@@ -51,11 +65,20 @@ class DataModelComp:
             if self.cuda:
                 torch.cuda.manual_seed(seed)
 
+        # Handle when we want to make multiple passes for a batch size to use
+        # less memory
+        if not self.size_of_one_pass:
+            self.size_of_one_pass = self.batch_size
+        if self.batch_size % self.size_of_one_pass != 0:
+            raise Exception('batch_size should be a mutliple of size_of_one_pass')
+        self.num_passes = self.batch_size // self.size_of_one_pass
+        self.lr /= self.num_passes
+
         # Create network and optimizer
         self.model = model
         if self.cuda:
             self.model.cuda()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=lr,
+        self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr,
                                    momentum=momentum)
         if decay:
             self.scheduler = optim.lr_scheduler.StepLR(
@@ -71,6 +94,8 @@ class DataModelComp:
             for i, bitmap in enumerate(bitmaps):
                 save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                        self.run_i, 0, i)
+        if self.save_obj:
+            save_data_model_comp(self)
 
     def get_data_loaders(self, same_dist=False, data='MNIST'):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
@@ -100,23 +125,24 @@ class DataModelComp:
 
         np.random.seed(self.train_val_split_seed)
 
-        num_train = len(train)
-        num_val = len(train) // 5
+        num_train_before_split = len(train)
 
-        # TODO: fix num_train and num_val
-        self.num_train = num_train
-        self.num_val = num_val
+        self.num_train_before_split = num_train_before_split
 
         if self.num_train_after_split is None:
-            self.num_train_after_split = num_train - num_val
+            self.num_val = self.num_train_before_split // 5
+            self.num_train_after_split = num_train_before_split - self.num_val
 
-        if num_val + self.num_train_after_split > num_train:
+        else:
+            self.num_val = self.num_train_after_split
+
+        if self.num_val + self.num_train_after_split > num_train_before_split:
             print("k must be less than %d (number of training examples = %d"
                   " - number of validation examples = %d)" %
-                  (num_train-num_val, num_train, num_val))
+                  (num_train_before_split-self.num_val, num_train_before_split, self.num_val))
             raise Exception
 
-        train_and_val_idxs = np.random.choice(num_train, num_val+self.num_train_after_split,
+        train_and_val_idxs = np.random.choice(num_train_before_split, self.num_val+self.num_train_after_split,
                                               replace=False)
         train_idxs = train_and_val_idxs[:self.num_train_after_split]
         #  further reduce by factor of to_exclude (does same if bootstrapping)
@@ -133,7 +159,7 @@ class DataModelComp:
         train_loader.dataset.train_labels = [train_loader.dataset.train_labels[k]
                                              if np.random.uniform() > self.corruption
                                              else np.random.randint(10)
-                                             for k in range(num_train)]
+                                             for k in range(len(train_loader.dataset.train_labels))]
 
         val_sampler = SubsetSequentialSampler(val_idxs)
         val_loader = torch.utils.data.DataLoader(train, batch_size=self.test_batch_size,
@@ -141,6 +167,25 @@ class DataModelComp:
 
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
+
+        # TODO: fix this
+        # else:
+        #     combined = torch.utils.data.ConcatDataset([train, test])
+        #     num_train = len(train)
+        #     n = len(combined)
+        #     indices = list(range(n))
+        #
+        #     np.random.seed(split_random_seed)
+        #     np.random.shuffle(indices)
+        #
+        #     train_idx, test_idx = indices[:num_train], indices[num_train:]
+        #     train_sampler = SubsetSequentialSampler(train_idx)jjk
+        #     test_sampler = SubsetSequentialSampler(test_idx)
+        #
+        #     train_loader = torch.utils.data.DataLoader(combined, batch_size=self.batch_size,
+        #                                                sampler=train_sampler, **kwargs)
+        #     test_loader = torch.utils.data.DataLoader(combined, batch_size=self.test_batch_size,
+        #                                               sampler=test_sampler, **kwargs)
 
         return train_loader, val_loader, test_loader
 
@@ -155,13 +200,16 @@ class DataModelComp:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data), Variable(target)
+
             self.optimizer.zero_grad()
-            output = self.model(data)
 
-            #print('norm of weights: {}'.format(self.model.get_weight_norm()))
+            for i in range(0, self.num_passes):
+                data_partial = data[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
+                target_partial = target[i*self.size_of_one_pass: (i+1)*self.size_of_one_pass]
+                output = self.model(data_partial)
+                loss = F.nll_loss(output, target_partial)
+                loss.backward()
 
-            loss = F.nll_loss(output, target)
-            loss.backward()
             self.optimizer.step()
 
             if self.log_interval is not None and batch_idx % self.log_interval == 0:
@@ -177,16 +225,32 @@ class DataModelComp:
             steps += 1
         return steps
 
-    def train(self, epochs=None, eval_path=False, early_stopping=True, train_to_overfit=False, eval_train_every=False):
-        steps = 0
-        train_loss_to_return = []
-        print("Learning rate: {}, momentum: {}, number of training examples: {}"
-              .format(self.lr, self.momentum, self.num_train_after_split))
+    def plot_training_curves(self):
+        x = list(range(self.epochs))
+        plt.plot(x, [1 - acc for acc in self.accuracies[0]])
+        plt.plot(x, [1 - acc for acc in self.accuracies[1]])
+        plt.plot(x, [1 - acc for acc in self.accuracies[2]])
+        plt.title('Learning curves')
+        plt.xlabel('epochs')
+        plt.ylabel('error')
+        plt.legend(['train', 'val', 'test'], loc='upper right')
+        plt.savefig(os.path.join(SAVED_DIR, 'train_curves.jpg'))
+        
+    def print_validation_accs(self):
+        print('Validation list:', self.accuracies[1])
+        print('Best validation acc:', max(self.accuracies[1]))
+        print('Last validation acc:', self.accuracies[1][-1])
+
+    def train(self, epochs=None, eval_path=False):
+        print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
+              .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs))
         if eval_path:
-            _, _, train_bitmap = self.evaluate_train(0)
-            _, _, test_bitmap = self.evaluate_test(0)
+            train_bitmap = self.evaluate(0, type=0)[2]
+            test_bitmap = self.evaluate(0, type=2)[2]
             train_seq = [train_bitmap]
             test_seq = [test_bitmap]
+
+        """
         if epochs is None:
             epochs = self.epochs * self.num_train // self.num_train_after_split
         epochs_per_val = (self.num_train - self.num_val) // self.num_train_after_split  # Number of epochs adjusted for the training size TODO: adjust for the batch size
@@ -249,85 +313,105 @@ class DataModelComp:
             return val_acc, self.num_train_after_split * epoch, steps, train_loss_to_return
         else:
             return val_acc, self.num_train_after_split * epoch, steps
+        """
+
+        if epochs is None:
+            epochs = self.epochs
+
+        best_val_accuracy = 0
+        reached_zero_training_error = False
+
+        for epoch in range(1, epochs + 1):
+            self.train_step(epoch)
+
+            if self.print_only_train_and_val_errors or self.print_all_errors:
+                for i in range(2):
+                    self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
+
+                # Saves best model so far
+                if self.accuracies[1][-1] > best_val_accuracy:
+                    best_val_accuracy = self.accuracies[1][-1]
+                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-2)
+
+            if self.print_all_errors:
+                self.accuracies[2].append(self.evaluate(epoch, type=2)[0])
+
+            if self.print_all_errors or self.print_only_train_and_val_errors:
+                if self.accuracies[0][-1] == 1 and not reached_zero_training_error:
+                    reached_zero_training_error = True
+                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-1)
+
+            if self.save_model == "every_epoch":
+                save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
+
+        if self.save_model == "only_end":
+            save_shallow_net(self.model, self.model.num_hidden, self.run_i)
+
+        if eval_path:
+            return train_seq, test_seq
+        val_acc = self.evaluate(epoch, type=1)[0]
+
+        if isinstance(self.model, ShallowNet):
+            print('Training complete!! For hidden size = {}'.format(self.model.num_hidden))
+        else:
+            print('Training complete!!')
+            
+        self.print_validation_accs()
+        if self.plot_curves:
+            self.plot_training_curves()
+
+        return val_acc, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
 
-    def get_bitmaps(self, cur_iter):
-        _, _, train_bitmap = self.evaluate_train(cur_iter)
-        _, _, val_bitmap = self.evaluate_val(cur_iter)
-        _, _, test_bitmap = self.evaluate_test(cur_iter)
-        return train_bitmap, val_bitmap, test_bitmap
+    def load_saved_shallow_net(self, num_hidden, run_i, slurm_id, inter=0):
+        r"""To be used instead of train when loading a trained model"""
+        try:
+            self.model = load_shallow_net(num_hidden, run_i, slurm_id, inter)
+        except OSError as e:
+            if isinstance(e, FileNotFoundError):
+                print("Using inter 0 instead for num_hidden:", num_hidden)
+                self.model = load_shallow_net(num_hidden, run_i, slurm_id, 0)
+            else:
+                raise e
 
-    # TODO: combine next 3 functions into 1
-    def evaluate_train(self, cur_iter):
+    # Returns bitmaps on training, validation and test data
+    def get_bitmaps(self, cur_epochs):
+        return [self.evaluate(cur_epochs, type=i)[2] for i in range(3)]
+
+    def evaluate(self, cur_epochs, type, probs_required=False):
         self.model.eval()
-        num_train = self.num_train_after_split
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
-        for data, target in self.train_loader:
+        probs = None
+
+        num_to_evaluate_on = [self.num_train_after_split, self.num_val, len(self.test_loader.dataset)][type]
+        data_loader = [self.train_loader, self.val_loader, self.test_loader][type]
+
+        for data, target in data_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
+            prob = self.model(data)
+            total_loss += F.nll_loss(prob, target, size_average=False).data[0]  # sum up batch loss
+            pred = prob.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)
+            if probs_required:
+                if probs is None:
+                    probs = prob.data
+                else:
+                    probs = torch.cat([probs, prob.data], 0)
             num_correct += batch_correct.sum()
 
-        avg_loss = total_loss / num_train
-        acc = num_correct / num_train
-        print('After {} iterations, Training set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'
-              .format(cur_iter, avg_loss, num_correct, num_train, 100. * acc))
+        avg_loss = total_loss / num_to_evaluate_on
+        acc = num_correct / num_to_evaluate_on
+        print('\nAfter {} epochs ({} iterations), {} set: Average loss: {:.4f},Accuracy: {}/{} ({:.2f}%)\n'.format(cur_epochs,
+              self.num_train_after_split * cur_epochs, ['Training', 'Validation', 'Test'][type],
+              avg_loss, num_correct, num_to_evaluate_on, 100. * acc))
 
-        return acc, avg_loss, correct
-
-    def evaluate_val(self, cur_iter):
-        self.model.eval()
-        num_val = self.num_val
-        total_loss = 0
-        num_correct = 0
-        correct = torch.FloatTensor(0, 1)
-        for data, target in self.val_loader:
-            if self.cuda:
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
-            correct = torch.cat([correct, batch_correct], 0)
-            num_correct += batch_correct.sum()
-
-        avg_loss = total_loss / num_val
-        acc = num_correct / num_val
-        print('After {} iterations, Validation set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
-            cur_iter, avg_loss, num_correct, num_val, 100. * acc))
-        #print(correct)
-
-        return acc, avg_loss, correct
-
-    def evaluate_test(self, cur_iter):
-        self.model.eval()
-        num_test = len(self.test_loader.dataset)
-        total_loss = 0
-        num_correct = 0
-        correct = torch.FloatTensor(0, 1)
-        for data, target in self.test_loader:
-            if self.cuda:
-                data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
-            output = self.model(data)
-            total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
-            pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
-            batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
-            correct = torch.cat([correct, batch_correct], 0)
-            num_correct += batch_correct.sum()
-
-        avg_loss = total_loss / num_test
-        acc = num_correct / num_test
-        print('After {} iterations, Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
-            cur_iter, avg_loss, num_correct, num_test, 100. * acc))
-
-        return acc, avg_loss, correct
+        if probs_required:
+            return acc, avg_loss, correct, probs
+        else:
+            return acc, avg_loss, correct

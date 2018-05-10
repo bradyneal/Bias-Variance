@@ -1,0 +1,14 @@
+{
+    "language"        : "PYTHON",
+    "main-file"       : "nn_lr.py",
+    "experiment-name" : "learning rate tuning",
+    "likelihood"      : "NOISELESS",
+    "variables" : {
+        "loglr" : {
+            "type" : "FLOAT",
+            "size" : 1,
+            "min"  : -8,
+            "max"  : 4
+        }
+    }
+}

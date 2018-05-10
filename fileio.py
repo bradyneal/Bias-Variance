@@ -6,6 +6,8 @@ from __future__ import print_function, division
 import os
 import torch
 import getpass
+import pickle
+from models import ShallowNet
 
 #USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
@@ -14,6 +16,8 @@ OUTPUT_DIR = os.path.join(os.getcwd(), 'save_info')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
+DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
+HYPERPARAM_DIR = os.path.join(SAVED_DIR, 'hyperparam')
 BITMAP_DIRS = ['train_bitmaps', 'val_bitmaps', 'test_bitmaps']
 WEIGHT_DIR = os.path.join(SAVED_DIR, 'weights')
 PAIRWISE_DISTS_DIR = os.path.join(SAVED_DIR, 'pairwise_dists')
@@ -21,9 +25,10 @@ PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITMAP_DIRS]
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
-         FINE_PATH_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
+         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
-COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
+OLD_COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
+COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
 COMMON_REGEXP_FORMAT = r'shallow%d_run\d+_job(\d+).pt'
 
 TO_CPU_DEFAULT = False
@@ -38,11 +43,32 @@ def make_all_dirs():
 
 make_all_dirs()
 
+
+def get_slurm_id():
+    try:
+        return os.environ["SLURM_JOB_ID"]
+    except:
+        return 0
+
+
 """Specific saving functions"""
 
 
-def save_model(model, num_hidden, i, slurm_id):
-    return torch.save(model, get_model_path(num_hidden, i, slurm_id))
+def save_data_model_comp(data_model_comp_obj, slurm_id=get_slurm_id(), inter=0):
+    data_model_comp_path = get_data_model_comp_path(data_model_comp_obj.model.num_hidden, data_model_comp_obj.run_i, slurm_id, inter)
+    pickle.dump(data_model_comp_obj, open(data_model_comp_path, 'wb'))
+
+
+def save_shallow_net(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    #if isinstance(model, ShallowNet):
+    #    return save_model(model, model.num_hidden, i, slurm_id, inter)
+    #else:
+    #    raise Exception('Naming convention for saving model not implemented for models other than ShallowNet')
+    return save_model(model, model.num_hidden, i, slurm_id, inter)
+
+
+def save_model(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    return torch.save(model, get_model_path(num_hidden, i, slurm_id, inter))
 
 
 def save_weights(weights, num_hidden, i, slurm_id):
@@ -62,13 +88,21 @@ def save_opt_path_bitmaps(opt_path, num_hidden, i, slurm_id):
 
 
 def save_fine_path_bitmaps(bitmap, num_hidden, i, inter, type):
-    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, type))
+    return torch.save(bitmap, get_fine_path_bitmaps_path(num_hidden, i, inter, get_slurm_id(), type))
 
 """Specific loading functions"""
 
 
-def load_model(num_hidden, i, slurm_id):
-    return load_torch(get_model_path(num_hidden, i, slurm_id))
+def load_data_model_comp(num_hidden, i, slurm_id=get_slurm_id(), inter=0):
+    return pickle.load(open(get_data_model_comp_path(num_hidden, i, slurm_id, inter), 'rb'))
+
+
+def load_shallow_net(num_hidden, i, slurm_id, inter=0):
+    return load_model(num_hidden, i, slurm_id, inter)
+
+
+def load_model(num_hidden, i, slurm_id, inter=0):
+    return load_torch(get_model_path(num_hidden, i, slurm_id, inter))
 
 
 def load_weights(num_hidden, i, slurm_id):
@@ -87,8 +121,8 @@ def load_opt_path_bitmaps(num_hidden, i, slurm_id):
     return load_torch(get_opt_path_bitmaps_path(num_hidden, i, slurm_id))
 
 
-def load_fine_path_bitmaps(num_hidden, i, inter, type):
-    return load_torch(get_fine_path_bitmaps_path(num_hidden, i, inter, type))
+def load_fine_path_bitmaps(num_hidden, i, inter, slurm_id, type):
+    return load_torch(get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id, type))
 
 
 def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
@@ -101,7 +135,7 @@ def load_torch(filename, to_cpu=TO_CPU_DEFAULT):
         try:
             return torch.load(filename)
         # likely CUDA error from saving it from GPU and loading to CPU
-        except RuntimeError as e:
+        except RuntimeError:
             return load_to_cpu(filename)
 
 
@@ -165,8 +199,20 @@ Functions that return the path for a specific directory
 """
 
 
-def get_model_path(num_hidden, i, slurm_id):
-    return get_path(MODEL_DIR, num_hidden, i, slurm_id)
+def get_hyperparam_main_plot_path(first_job_id):
+    return os.path.join(HYPERPARAM_DIR, 'job{}.jpg'.format(first_job_id))
+
+
+def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):
+    return os.path.join(HYPERPARAM_DIR, 'shallow{}_option{}_job{}.jpg'.format(num_hidden, option, first_job_id))
+
+
+def get_data_model_comp_path(num_hidden, i, slurm_id, inter=0):
+    return get_path(DATA_MODEL_COMP_DIR, num_hidden, i, slurm_id, inter)
+
+
+def get_model_path(num_hidden, i, slurm_id, inter=0):
+    return get_path(MODEL_DIR, num_hidden, i, slurm_id, inter)
 
 
 def get_weight_path(num_hidden, i, slurm_id):
@@ -186,23 +232,25 @@ def get_opt_path_bitmaps_path(num_hidden, i, slurm_id):
     return get_path(PATH_DIR, num_hidden, i, slurm_id)
 
 
-def get_fine_path_bitmaps_path(num_hidden, i, inter,
+def get_fine_path_bitmaps_path(num_hidden, i, inter, slurm_id,
                                type  # 0 for train, 1 for validation, 2 for test
                                ):
     return os.path.join(FINE_PATH_DIRS[type],
-                        'shallow{}_run{}_inter{}.pt'.format(num_hidden, i, inter))
+        'shallow{}_run{}_inter{}_job{}.pt'.format(num_hidden, i, inter, slurm_id))
 
 
-def get_path(directory, num_hidden, i, slurm_id):
+def get_path(directory, num_hidden, i, slurm_id, inter=0):
     """Get path of a file in a specific directory"""
-    return os.path.join(directory, get_filename(num_hidden, i, slurm_id))
+    return os.path.join(directory, get_filename(num_hidden, i, slurm_id, inter))
 
 
-def get_filename(num_hidden, i, slurm_id):
+def get_filename(num_hidden, i, slurm_id, inter=0):
     """
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
-    return COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+    if int(slurm_id) > 161000:
+        return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
+    return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
 
 
 def get_train_test_modifiers(modifier=None):
