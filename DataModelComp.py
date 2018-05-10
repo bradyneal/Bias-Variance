@@ -190,8 +190,8 @@ class DataModelComp:
         print('Last validation acc:', self.accuracies[1][-1])
 
     def train(self, epochs=None, eval_path=False):
-        print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}"
-              .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs))
+        print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}, seed: {}"
+              .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs, self.seed))
         if eval_path:
             train_bitmap = self.evaluate(0, type=0)[2]
             test_bitmap = self.evaluate(0, type=2)[2]

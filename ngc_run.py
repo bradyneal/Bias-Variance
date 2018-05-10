@@ -10,7 +10,7 @@ parser.add_argument('--seed', type=int)
 parser.add_argument('--num_seeds', type=int, default=2)
 
 # Needed for hyperparameter tuning
-parser.add_argument('--learning_rate', type=float, default=0.1)
+parser.add_argument('--learning_rate', nargs='+', type=float, default=[0.1])
 parser.add_argument('--momentum', type=float, default=0.9)
 
 # Parameters for different experiments
@@ -47,16 +47,20 @@ if args.print_errors == "train_and_val":
 if args.seed is not None:
     seeds = [args.seed]
 else:
-    seeds = range(args.num_seeds)
+    seeds = range(35, args.num_seeds)
 
 for seed in seeds:
-    for num_hidden in args.hidden_arr:
+    for i, num_hidden in enumerate(args.hidden_arr):
+        if len(args.learning_rate) == len(args.hidden_arr):
+            lr = args.learning_rate[i]
+        else:
+            lr = args.learning_rate[0]
         print(DataModelComp(ShallowNet(num_hidden), epochs=args.max_epochs,
-            run_i=seed, bootstrap=args.bootstrap, batch_size=args.batch_size,
+            run_i=seed, bootstrap=(not args.no_bootstrap), batch_size=args.batch_size,
             size_of_one_pass=args.size_of_one_pass,
             train_val_split_seed=0 if args.variance_over is "initialization" else seed,
             seed=0 if args.variance_over is "sampling" else seed,
-            lr=args.learning_rate, momentum=args.momentum,
+            lr=lr, momentum=args.momentum,
             print_all_errors=print_all_errors, print_only_train_and_val_errors=print_only_train_and_val_errors,
-            num_train_after_split=args.num_train_after_split, save_model=args.save_model,
+            num_train_after_split=args.num_train_after_split, save_model=args.save_model, save_best_model=args.save_best_model,
             decay=args.decay, gamma=args.gamma, no_cuda=args.no_cuda).train())
