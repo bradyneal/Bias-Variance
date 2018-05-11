@@ -24,7 +24,15 @@ lib64/
 parts/
 sdist/
 var/
+
 data/
+.idea/
+save_info/
+saved/
+test_bitmaps/
+train_bitmaps/
+val_bitmaps/
+
 wheels/
 *.egg-info/
 .installed.cfg
@@ -105,10 +113,6 @@ ENV/
 # mypy
 .mypy_cache/
 
-.idea/
-save_info/
 
-saved/
-test_bitmaps/
-train_bitmaps/
-val_bitmaps/
+
+

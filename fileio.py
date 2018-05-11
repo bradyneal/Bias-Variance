@@ -10,8 +10,10 @@ import pickle
 from models import ShallowNet
 
 USERNAME = getpass.getuser()
+
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 OUTPUT_DIR = os.getcwd()  # for cedar/graham
+
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
@@ -196,8 +198,9 @@ Functions that return the path for a specific directory
 """
 
 
-def get_hyperparam_main_plot_path(first_job_id):
-    return os.path.join(HYPERPARAM_DIR, 'job{}.jpg'.format(first_job_id))
+
+def get_hyperparam_main_plot_path(first_job_id, option):
+    return os.path.join(HYPERPARAM_DIR, '{}_job{}.jpg'.format(option, first_job_id))
 
 
 def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):

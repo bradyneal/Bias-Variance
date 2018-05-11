@@ -18,16 +18,30 @@ def plot_line_with_normal_errbars(x, y, y_std, xlabel=None, ylabel=None, title=N
     Save figure if filename specified; otherwise, show the figure.
     '''
     if isinstance(y_std, list):
-        yerr = [2 * std for std in y_std]
+        yerr = [1.96 * std for std in y_std]
     else:
-        yerr = 2 * y_std
+        yerr = 1.96 * y_std
+
     plt.figure()
     plt.errorbar(x, y, yerr=yerr, capsize=CAPSIZE)
     run_fig_extras(xlabel, ylabel, title, filename, xscale, yscale, grid)
 
 
+def plot_line_with_errbars(x, y, lowers, uppers, xlabel=None, ylabel=None, title=None, filename=None, xscale=XSCALE_DEF, yscale=YSCALE_DEF, grid=GRID_DEF):
+    '''
+    Plot figure with error bars specified by lowers and uppers (more general than above).
+    Save figure if filename specified; otherwise, show the figure.
+    '''
+    plt.figure()
+    plt.errorbar(x, y, yerr=[lowers, uppers], capsize=CAPSIZE)
+    run_fig_extras(xlabel, ylabel, title, filename, xscale, yscale, grid)
+
+
 def run_fig_extras(xlabel=None, ylabel=None, title=None, filename=None, xscale=XSCALE_DEF, yscale=YSCALE_DEF, grid=GRID_DEF):
-    '''Set details about currently opened figure and show or save the figure'''
+    '''
+    Set details about currently opened figure.
+    Save figure if filename specified; otherwise, show the figure.
+    '''
     if xlabel:
         plt.xlabel(xlabel)
     if ylabel:
