@@ -1,4 +1,3 @@
-from skopt import gp_minimize
 from DataModelComp import DataModelComp
 from models import ShallowNet
 import sys

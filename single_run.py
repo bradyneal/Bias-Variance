@@ -2,13 +2,13 @@ from DataModelComp import DataModelComp
 from models import ShallowNet
 import sys 
 
-HIDDEN_SIZES = [5, 25, 100, 1E3, 5E3, 10E3, 20E3, 40E3, 80E3]
-NUM_RUNS = 30
+HIDDEN_SIZES = [5, 25, 100, 1E3, 5E3, 10E3] #20E3, 40E3, 80E3]
+LR = [1, 0.1, 0.01]
 
 indx = 0
-for run in range(NUM_RUNS)
+for lr in range(len(LR)):
     for i in range(len(HIDDEN_SIZES)):
-    	seed = 2018+indx
+        seed = 2018+indx
         num_hidden = HIDDEN_SIZES[i]
         val_acc, _ = DataModelComp(ShallowNet(num_hidden), epochs=1, log_interval=None,
                                    run_i=seed, train_val_split_seed=seed, seed=seed,
