@@ -29,7 +29,7 @@ class DataModelComp:
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
                  size_of_one_pass=None, plot_curves=False, save_model="all", optimizer="sgd", beta=0.9,
-                 beta2=0.99, max_iter=20, max_eval=1.25*20, history_size=100):
+                 beta2=0.99, max_iter=20, history_size=100):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -80,11 +80,11 @@ class DataModelComp:
             self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=momentum)
             self.comp_closure = False
         elif optimizer == "adam":
-            self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, beta1=beta, beta2=beta2)
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, betas=(beta, beta2))
             self.comp_closure = False
         elif optimizer == "lbfgs":
             self.optimizer = optim.LBFGS(self.model.parameters(), lr=self.lr, max_iter=max_iter,
-                                         max_eval=max_eval, history_size=history_size) # Note: this doesn't perform line search!
+                                         history_size=history_size) # Note: this doesn't perform line search!
             self.comp_closure = True
         else:
             print("invalid optimizer!")
@@ -105,6 +105,10 @@ class DataModelComp:
 
         if self.save_obj:
             save_data_model_comp(self)
+
+    def compute_norm(self):
+        m_list = [m.norm(2) for m in self.model.parameters()]
+        return np.array(m_list).sum()
 
     def get_data_loaders(self, same_dist=False):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
@@ -213,6 +217,7 @@ class DataModelComp:
                     save_fine_path_bitmaps(bitmap, self.model.num_hidden,
                                            self.run_i, self.num_saved_iters, i)
                 self.num_saved_iters += 1
+            #print('model size: {}'.format(self.compute_norm()))
 
     def plot_training_curves(self):
         x = list(range(self.epochs))
