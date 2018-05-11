@@ -105,7 +105,10 @@ ENV/
 # mypy
 .mypy_cache/
 
-data/
 .idea/
 save_info/
 
+saved/
+test_bitmaps/
+train_bitmaps/
+val_bitmaps/

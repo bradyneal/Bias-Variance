@@ -15,6 +15,6 @@ for lr in range(len(LR)):
                                    bootstrap=True, batch_size=10, num_train_after_split=100,
                                    print_only_train_and_val_errors=False, print_all_errors=True, lr=lr, momentum=0.9,
                                    plot_curves=False, optimizer="lbfgs", max_iter=20, max_eval=1.25*20, history_size=100).train()
-        indx += 1git 
+        indx += 1
 print('done')
 #if __name__ == '__main__':
