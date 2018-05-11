@@ -19,7 +19,7 @@ run_exp_e = True
 start_seed = 2018
 
 #  Local changes only
-OUTPUT_DIR = os.path.join(os.getcwd(), 'information-paths/matt_folder')
+OUTPUT_DIR = os.path.join(os.getcwd(), 'matt_folder')
 
 #  Learning Curves
 if run_exp_a:
@@ -283,7 +283,7 @@ if run_exp_e:
                 #with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
                 #    np.save(file=f, arr=all_bitmaps)
                 state = {'state': net.state_dict()}
-                torch.save(state, f=OUTPUT_DIR+'/model-corr-{}run-{}.pt'.format(corr, i))
+                torch.save(state, f=OUTPUT_DIR+'/model-corr-{}run-{}-seed-{}.pt'.format(corr, i,  start_seed))
                 print('saved up to {} of run {}'.format(corr, i))
 
     #with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:

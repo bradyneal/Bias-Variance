@@ -105,3 +105,7 @@ ENV/
 .idea/
 data/
 save_info/
+saved/
+test_bitmaps/
+train_bitmaps/
+val_bitmaps/
