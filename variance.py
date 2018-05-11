@@ -12,8 +12,12 @@ from DataModelComp import DataModelComp
 from fileio import load_fine_path_bitmaps
 from models import ShallowNet
 from scipy.stats import chi2
+import torch
+from torchvision import datasets, transforms
 plt.switch_backend('agg')
 
+MNIST_TEST_SIZE = 10000
+NUM_MNIST_CLASSES = 10
 
 class Variance:
     def __init__(self, hidden_arr, num_seeds, slurm_id, data_type, types=[2],
@@ -99,6 +103,20 @@ class Variance:
                 print('Calculating mean')
 
                 mean = torch.mean(data_combined, 0)
+
+                # ### Calculate bias ###
+                # test = datasets.MNIST('./data', train=False, download=True, transform=transforms.ToTensor())
+                # test_loader = torch.utils.data.DataLoader(test, batch_size=MNIST_TEST_SIZE)
+                # _, y = next(iter(test_loader))
+                #
+                # # get one-hot encoding (should be a separate function)
+                # y_onehot = torch.FloatTensor(MNIST_TEST_SIZE, NUM_MNIST_CLASSES)
+                # y_onehot.zero_()
+                # y_onehot.scatter_(1, y.unsqueeze(1), 1)
+                #
+                # bias = torch.mean(mean - y_onehot)
+                # ######################
+
                 variance = self.calculate_variance(data_combined, mean)
                 variance = torch.Tensor([variance]).unsqueeze(0)
                 relative_error = sqrt(2/self.num_seeds)
