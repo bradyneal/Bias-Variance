@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import os
+import argparse
 
 run_exp_a = False
 run_exp_b_c = False
@@ -16,7 +17,11 @@ run_exp_e = True
 #USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
-start_seed = 2018
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--seed', type=int, help='start seed')
+args = parser.parse_args()
+
+start_seed = args.seed
 
 #  Local changes only
 OUTPUT_DIR = os.path.join(os.getcwd(), 'matt_folder')
