@@ -16,6 +16,8 @@ run_exp_e = True
 #USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
+start_seed = 2018
+
 #  Local changes only
 OUTPUT_DIR = os.path.join(os.getcwd(), 'information-paths/matt_folder')
 
@@ -263,7 +265,7 @@ if run_exp_e:
 
                 data_model_comp = DataModelComp(net, batch_size=128, test_batch_size=128, epochs=200,
                                                 lr=lr_list[0], decay=True, step_size=1, gamma=0.95, momentum=0.9,
-                                                no_cuda=False, seed=i+2018, log_interval=1000,
+                                                no_cuda=False, seed=i+start_seed, log_interval=1000,
                                                 run_i=i, save_interval=None, data='CIFAR10', corruption=corr)
                 _, _, steps = data_model_comp.train(eval_path=False, early_stopping=False,
                                                     train_to_overfit=label_corruption_threshold[0],
@@ -281,7 +283,7 @@ if run_exp_e:
                 #with open(OUTPUT_DIR+'/bitmaps', 'wb') as f:
                 #    np.save(file=f, arr=all_bitmaps)
                 state = {'state': net.state_dict()}
-                torch.save(state, f=OUTPUT_DIR+'/model-corr-{}run-{}.pt'.format(corr, j))
+                torch.save(state, f=OUTPUT_DIR+'/model-corr-{}run-{}.pt'.format(corr, i))
                 print('saved up to {} of run {}'.format(corr, i))
 
     #with open(OUTPUT_DIR+'/fig_e_series', 'wb') as f:
