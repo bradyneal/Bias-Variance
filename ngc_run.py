@@ -24,6 +24,9 @@ parser.add_argument('--print_errors', choices=["all", "train_and_val"], default=
 parser.add_argument('--max_epochs', type=int, default=50)
 parser.add_argument('--save_best_model', action="store_true")
 
+# Parameter to split it
+parser.add_argument('--start_seed', type=int, default=0)
+
 # Default is good almost always
 parser.add_argument('--save_model', choices=["only_end", "every_epoch"], default="only_end")
 
@@ -48,7 +51,7 @@ if args.print_errors == "train_and_val":
 if args.seed is not None:
     seeds = [args.seed]
 else:
-    seeds = range(35, args.num_seeds)
+    seeds = range(args.start_seed, args.num_seeds)
 
 for seed in seeds:
     for i, num_hidden in enumerate(args.hidden_arr):
