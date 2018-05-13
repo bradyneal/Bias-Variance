@@ -109,3 +109,6 @@ saved/
 test_bitmaps/
 train_bitmaps/
 val_bitmaps/
+credentials.py
+to_plot.npy
+

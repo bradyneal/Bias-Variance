@@ -314,11 +314,13 @@ class DataModelComp:
         total_loss = 0
         num_correct = 0
         correct = torch.FloatTensor(0, 1)
+        probs = []
         for data, target in self.test_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
             output = self.model(data)
+            probs.append(output)
             total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
@@ -330,4 +332,5 @@ class DataModelComp:
         print('After {} iterations, Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)'.format(
             cur_iter, avg_loss, num_correct, num_test, 100. * acc))
 
-        return acc, avg_loss, correct
+        return acc, avg_loss, correct, torch.cat(probs, 0)
+
