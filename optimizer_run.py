@@ -26,9 +26,9 @@ else:
 BASE = 10
 
 BETA0_MIN = 0.5
-BETA0_MAX = 1
+BETA0_MAX = 0.99999
 BETA1_MIN = 0.9
-BETA1_MAX = 1
+BETA1_MAX = 0.99999
 
 def val_cost_lbfgs(loglr, num_hidden, seed, maximize=True):
     lr = BASE ** loglr

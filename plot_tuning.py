@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/hyperparam_out'
 files_dir = os.listdir(RES_PATH)
 
-to_plot = np.zeros([len(files_dir), 5, 5])  # size of table
+to_plot = np.zeros([len(files_dir), 100, 5])  # size of table
 hidden_size_list = []
 
 i = 0
 for file in files_dir:
-    table, _, hidden_size = parse_validations_table(os.path.join(RES_PATH, file))
+    _, table, hidden_size = parse_validations_table(os.path.join(RES_PATH, file))
     to_plot[i] = table
     i += 1
     hidden_size_list.append(hidden_size)
