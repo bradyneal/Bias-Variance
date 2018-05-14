@@ -142,6 +142,12 @@ class DataModelComp:
         test_loader = torch.utils.data.DataLoader(test, batch_size=self.test_batch_size,
                                                   shuffle=False, **kwargs)
 
+        #  Add randomization to test labels
+        test_loader.dataset.test_labels = [test_loader.dataset.test_labels[k]
+                                           if np.random.uniform() > self.corruption
+                                           else np.random.randint(10)
+                                           for k in range(len(test_loader.dataset.test_labels))]
+
         return train_loader, val_loader, test_loader
 
     def train_step(self, epoch=1):
@@ -316,11 +322,13 @@ class DataModelComp:
         correct = torch.FloatTensor(0, 1)
         probs = []
         for data, target in self.test_loader:
+            # for normal data
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
             data, target = Variable(data, volatile=True), Variable(target)
             output = self.model(data)
             probs.append(output)
+
             total_loss += F.nll_loss(output, target, size_average=False).data[0]  # sum up batch loss
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()

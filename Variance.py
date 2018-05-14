@@ -72,6 +72,7 @@ class Variance:
             raise Exception('In get_variances, parameter types should be a list')
 
         variances_by_train_val_test, losses_by_train_val_test, weight_norms1_by_train_val_test, weight_norms2_by_train_val_test = [], [], [], []
+        biases = []
         for type in self.types:
             variances_by_hidden_layer, losses_by_hidden_layer, weight_norms1_by_hidden_layer, weight_norms2_by_hidden_layer = [], [], [], []
             for num_hidden in self.hidden_arr:
@@ -105,16 +106,15 @@ class Variance:
                 mean = torch.mean(data_combined, 0)
 
                 # ### Calculate bias ###
-                # test = datasets.MNIST('./data', train=False, download=True, transform=transforms.ToTensor())
-                # test_loader = torch.utils.data.DataLoader(test, batch_size=MNIST_TEST_SIZE)
-                # _, y = next(iter(test_loader))
-                #
+                test = datasets.MNIST('./data', train=False, download=True, transform=transforms.ToTensor())
+                test_loader = torch.utils.data.DataLoader(test, batch_size=MNIST_TEST_SIZE)
+                _, y = next(iter(test_loader))
                 # # get one-hot encoding (should be a separate function)
-                # y_onehot = torch.FloatTensor(MNIST_TEST_SIZE, NUM_MNIST_CLASSES)
-                # y_onehot.zero_()
-                # y_onehot.scatter_(1, y.unsqueeze(1), 1)
-                #
-                # bias = torch.mean(mean - y_onehot)
+                y_onehot = torch.FloatTensor(MNIST_TEST_SIZE, NUM_MNIST_CLASSES)
+                y_onehot.zero_()
+                y_onehot.scatter_(1, y.unsqueeze(1), 1)
+                bias = torch.mean(mean - y_onehot)
+                biases.append(bias)
                 # ######################
 
                 variance = self.calculate_variance(data_combined, mean)
