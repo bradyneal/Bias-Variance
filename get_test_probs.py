@@ -3,7 +3,6 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import torchvision
 
 from DataModelComp import DataModelComp
 from models import ThreeLayerNetCIFAR10
@@ -32,57 +31,62 @@ biases_by_corr_normal = []
 for corr in corr_list:
     dir = os.path.join(OUTPUT_DIR, corr)
     num_seeds = len(os.listdir(dir))
-    outputs_normal = torch.zeros(num_seeds, 10000, 10)
-    outputs_corrupt = torch.zeros(num_seeds, 10000, 10)
+    outputs = torch.zeros(num_seeds, 10000, 10)
     ind = 0
     for model in os.listdir(dir):
+        print('running for corr: {} model: {}'.format(corr, model))
         mod = torch.load(f=os.path.join(dir, model))
         deepish_net = ThreeLayerNetCIFAR10(512)
         deepish_net.load_state_dict(mod['state'])
-        seed = 0 #int(model.split('-')[-1].split('.')[0])+int(model.split('-')[3])*11
-        data_model_comp = DataModelComp(deepish_net, batch_size=128, test_batch_size=128, epochs=200,
-                                        lr=1000, decay=True, step_size=1, gamma=0.95, momentum=0.9,
-                                        no_cuda=False, seed=seed, log_interval=1000,
-                                        run_i=1, save_interval=None, data='CIFAR10', corruption=float(corr))
-        _, _, _, output = data_model_comp.evaluate_test(cur_iter=1)
-        outputs_corrupt[ind] = output.exp().detach()
-        true_labels = data_model_comp.test_loader.dataset.test_labels
+        seed = int(model.split('-')[-1].split('.')[0])+int(model.split('-')[3])*11
+        #data_model_comp = DataModelComp(deepish_net, batch_size=128, test_batch_size=128, epochs=200,
+        #                                lr=1000, decay=True, step_size=1, gamma=0.95, momentum=0.9,
+        #                                no_cuda=False, seed=seed, log_interval=1000,
+        #                                run_i=1, save_interval=None, data='CIFAR10', corruption=float(corr))
+        #_, _, _, output = data_model_comp.evaluate_test(cur_iter=1)
+        #outputs_corrupt[ind] = output.exp().detach()
+        #corrupted_labels = np.array(data_model_comp.test_loader.dataset.test_labels)
 
         data_model_comp = DataModelComp(deepish_net, batch_size=128, test_batch_size=128, epochs=200,
                                         lr=1000, decay=True, step_size=1, gamma=0.95, momentum=0.9,
                                         no_cuda=False, seed=seed, log_interval=1000,
                                         run_i=1, save_interval=None, data='CIFAR10', corruption=0)
         _, _, _, output = data_model_comp.evaluate_test(cur_iter=1)
-        outputs_normal[ind] = output.exp().detach()
-        corrupted_labels = data_model_comp.test_loader.dataset.test_labels
-        print(corrupted_labels)
+        outputs[ind] = output.exp().detach()
+
         ind += 1
 
-    mean_corrupt = torch.mean(outputs_corrupt, 0)
-    mean_normal = torch.mean(outputs_normal, 0)
+    mean = torch.mean(outputs, 0)
+    true_labels = torch.LongTensor(data_model_comp.test_loader.dataset.test_labels)
+
+    data_model_comp = DataModelComp(deepish_net, batch_size=128, test_batch_size=128, epochs=200,
+                                    lr=1000, decay=True, step_size=1, gamma=0.95, momentum=0.9,
+                                    no_cuda=False, seed=seed, log_interval=1000,
+                                    run_i=1, save_interval=None, data='CIFAR10', corruption=float(corr))
+    corrupted_labels = torch.LongTensor(data_model_comp.test_loader.dataset.test_labels)
 
     #test = torch.utils.data.datasets.MNIST('./data', train=False, download=True, transform=torchvision.transforms.ToTensor())
     #test_loader = torch.utils.data.DataLoader(test, batch_size=10000)
     #_, y = next(iter(test_loader))
 
-    biases_by_corr_corrupt.append(calculate_bias(corrupted_labels, mean_corrupt))
-    biases_by_corr_normal.append(calculate_bias(true_labels, mean_normal))
+    biases_by_corr_corrupt.append(calculate_bias(corrupted_labels, mean))
+    biases_by_corr_normal.append(calculate_bias(true_labels, mean))
 
-    variance = calculate_variance(outputs_corrupt, mean_corrupt)
+    variance = calculate_variance(outputs, mean)
     variance = torch.Tensor([variance]).unsqueeze(0)
     relative_error = np.sqrt(2 / num_seeds)
     std_variance = variance * relative_error
     variances_by_corr_corrupt.append(torch.cat([variance, std_variance, std_variance]).numpy())
-    print('variance mean size:', variance.size())
-    print('variance std size:', std_variance.size())
+    #print('variance mean size:', variance.size())
+    #print('variance std size:', std_variance.size())
 
-    variance = calculate_variance(outputs_normal, mean_normal)
+    variance = calculate_variance(outputs, mean)
     variance = torch.Tensor([variance]).unsqueeze(0)
     relative_error = np.sqrt(2 / num_seeds)
     std_variance = variance * relative_error
     variances_by_corr_normal.append(torch.cat([variance, std_variance, std_variance]).numpy())
-    print('variance mean size:', variance.size())
-    print('variance std size:', std_variance.size())
+    #print('variance mean size:', variance.size())
+    #print('variance std size:', std_variance.size())
 
 
 variances_by_corr_corrupt = np.array(variances_by_corr_corrupt)

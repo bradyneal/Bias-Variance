@@ -112,3 +112,7 @@ val_bitmaps/
 credentials.py
 to_plot.npy
 
+vn.npy
+vc.npy
+bc.npy
+bn.npy
