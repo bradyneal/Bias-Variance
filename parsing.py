@@ -29,7 +29,7 @@ def parse_validations(filename):
 
 
 ADD_PARAMS_MSGS = ['Starting exp: LBFGS for hidden size', 'Starting exp: GD for hidden size',
-                   'Starting exp: Adam for hidden size']
+                   'Starting exp: adam for hidden size', 'Starting exp: Batch GD for hidden size']
 NEXT_EXPERIMENT_MSG = 'Suggestion:'
 LR_MESSAGE = 'learning rate: '
 
@@ -59,8 +59,8 @@ def parse_validations_table(filename):
                 best_val_acc = float(line.split(':')[1].strip())
             elif line.startswith(LAST_VAL_MARK):
                 last_val_acc = float(line.split(':')[1].strip())
-            elif line.startswith(ADD_PARAMS_MSGS[0]) or line.startswith(ADD_PARAMS_MSGS[1]) \
-                    or line.startswith(ADD_PARAMS_MSGS[2]):
+            elif (line.startswith(ADD_PARAMS_MSGS[0]) or line.startswith(ADD_PARAMS_MSGS[1]) \
+                    or line.startswith(ADD_PARAMS_MSGS[2]) or line.startswith(ADD_PARAMS_MSGS[3])):
                 hidden_size, seed = line.split('size')[1].strip().split('with seed')
                 hidden_size, seed = float(hidden_size.strip()), float(seed.strip())
             elif line.startswith(LR_MESSAGE):
