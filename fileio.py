@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import os
 import torch
 import getpass
+import numpy as np
 import pickle
 from models import ShallowNet
 
@@ -16,6 +17,9 @@ OUTPUT_DIR = os.getcwd()  # for cedar/graham
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
+PROB_DIR = os.path.join(SAVED_DIR, 'probabilities')
+VARIANCE_DIR = os.path.join(SAVED_DIR, 'variance')
+BIAS_DIR = os.path.join(SAVED_DIR, 'variance')
 DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
 HYPERPARAM_DIR = os.path.join(SAVED_DIR, 'hyperparam')
 BITMAP_DIRS = ['train_bitmaps', 'val_bitmaps', 'test_bitmaps']
@@ -25,7 +29,7 @@ PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITMAP_DIRS]
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
-         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
+         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR, PROB_DIR, VARIANCE_DIR, BIAS_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
 OLD_COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
@@ -70,6 +74,26 @@ def save_model(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
     return torch.save(model, get_model_path(num_hidden, i, slurm_id, inter))
 
 
+def save_probabilities(slurm_id, num_hidden, probabilities):
+    return np.save(get_probabilities_path(slurm_id, num_hidden), probabilities)
+
+
+def save_correlations(slurm_id, correlations, matrix_num):
+    return np.save(get_correlations_path(slurm_id, matrix_num), correlations)
+
+
+def save_variance_data(slurm_id, variance, option):
+    return np.save(get_variance_path(slurm_id, option), variance)
+
+
+def save_variance_diffs(slurm_id, num_hidden, diffs):
+    return np.save(get_variance_diffs_path(slurm_id, num_hidden), diffs)
+
+
+def save_bias_diffs(slurm_id, num_hidden, diffs):
+    return np.save(get_bias_diffs_path(slurm_id, num_hidden), diffs)
+
+
 def save_weights(weights, num_hidden, i, slurm_id):
     return torch.save(weights, get_weight_path(num_hidden, i, slurm_id))
 
@@ -102,6 +126,26 @@ def load_shallow_net(num_hidden, i, slurm_id, inter=0):
 
 def load_model(num_hidden, i, slurm_id, inter=0):
     return load_torch(get_model_path(num_hidden, i, slurm_id, inter))
+
+
+def load_probabilities(slurm_id, num_hidden):
+    return np.load(get_probabilities_path(slurm_id, num_hidden))
+
+
+def load_correlations(slurm_id, matrix_num):
+    return np.load(get_correlations_path(slurm_id, matrix_num))
+
+
+def load_variance_data(slurm_id, option):
+    return np.load(get_variance_path(slurm_id, option))
+
+
+def load_variance_diffs(slurm_id, num_hidden):
+    return np.load(get_variance_diffs_path(slurm_id, num_hidden))
+
+
+def load_bias_diffs(slurm_id, num_hidden):
+    return np.load(get_bias_diffs_path(slurm_id, num_hidden))
 
 
 def load_weights(num_hidden, i, slurm_id):
@@ -205,6 +249,29 @@ def get_hyperparam_main_plot_path(first_job_id, option):
 
 def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):
     return os.path.join(HYPERPARAM_DIR, 'shallow{}_option{}_job{}.jpg'.format(num_hidden, option, first_job_id))
+
+
+def get_probabilities_path(slurm_id, num_hidden):
+    return os.path.join(PROB_DIR, 'shallow{}_job{}.npy'.format(num_hidden, slurm_id))
+
+
+def get_correlations_path(slurm_id, matrix_num):
+    return os.path.join(PROB_DIR, '{}_job{}.npy'.format(matrix_num, slurm_id))
+
+
+def get_variance_path(slurm_id, option):
+    '''
+    option is either all or individual_variance
+    '''
+    return os.path.join(VARIANCE_DIR, '{}_{}.npy'.format(slurm_id, option))
+
+
+def get_variance_diffs_path(slurm_id, num_hidden):
+    return os.path.join(VARIANCE_DIR, 'diffs_shallow{}_job{}.npy'.format(num_hidden, slurm_id))
+
+
+def get_bias_diffs_path(slurm_id, num_hidden):
+    return os.path.join(BIAS_DIR, 'diffs_shallow{}_job{}.npy'.format(num_hidden, slurm_id))
 
 
 def get_data_model_comp_path(num_hidden, i, slurm_id, inter=0):
