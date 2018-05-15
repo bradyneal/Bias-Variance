@@ -12,8 +12,8 @@ from models import ShallowNet
 
 USERNAME = getpass.getuser()
 
-#OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
-OUTPUT_DIR = os.getcwd()  # for cedar/graham
+OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+#OUTPUT_DIR = os.getcwd()  # for cedar/graham
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
