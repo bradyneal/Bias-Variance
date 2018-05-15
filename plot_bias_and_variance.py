@@ -37,7 +37,8 @@ def load_probabilities_and_get_variances(slurm_id, hidden_arr, num_bootstrap=100
     Loads saved probabilities, calculates differences using bootstrapping from
     the value of variance computed using all the seeds and saves those diffs.
     Prerequisite: Probabilities should be saved earlier using the
-    save_probabilities function.
+    save_probabilities function with dimension (num_seeds, num_test_examples,
+    probabilities_for_each_example), eg. (50, 10000, 10) for 50 seeds for MNIST.
     '''
     for num_hidden in hidden_arr:
         probabilities = load_probabilities(slurm_id, num_hidden)
