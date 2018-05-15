@@ -33,6 +33,12 @@ def get_bias(slurm_id, num_hidden):
 
 
 def load_probabilities_and_get_variances(slurm_id, hidden_arr, num_bootstrap=10000):
+    '''
+    Loads saved probabilities, calculates differences using bootstrapping from
+    the value of variance computed using all the seeds and saves those diffs.
+    Prerequisite: Probabilities should be saved earlier using the
+    save_probabilities function.
+    '''
     for num_hidden in hidden_arr:
         probabilities = load_probabilities(slurm_id, num_hidden)
         original_variance = calculate_variance(probabilities)
@@ -89,7 +95,14 @@ def find_variances_and_diffs(slurm_id, hidden_arr):
     return variances, lower_diffs, upper_diffs
 
 
-def find_biases_and_diffs(slurm_id, hidden_arr):
+def find_biases_and_diffs(slurm_id, hidden_arr, upper_percentile=0.995,
+    lower_percentile=0.005):
+    '''
+    Loads the differences calculated using bootstrapping, finds error bars using
+    those (calculated using the percentile values) and returns the error bars.
+    Prerequisite: diffs should be saved earlier using the
+    load_probabilities_and_get_variances function.
+    '''
     variances, lower_diffs, upper_diffs = [], [], []
     for num_hidden in hidden_arr:
         original_variance = get_bias(slurm_id, num_hidden)
@@ -99,8 +112,8 @@ def find_biases_and_diffs(slurm_id, hidden_arr):
         print(np.mean(np.array(diffs)))
         diffs = list(sorted(diffs))
 
-        upper_diff = get_percentile(diffs, 0.995)
-        lower_diff = -get_percentile(diffs, 0.005)
+        upper_diff = get_percentile(diffs, upper_percentile)
+        lower_diff = -get_percentile(diffs, lower_percentile)
 
         upper_diffs.append(upper_diff)
         lower_diffs.append(lower_diff)
@@ -109,6 +122,12 @@ def find_biases_and_diffs(slurm_id, hidden_arr):
 
 
 def plot_variances_with_diffs(slurm_id, hidden_arr, title, label="None"):
+    '''
+    Loads the differences calculated using bootstrapping, finds error bars using
+    those and plots the graph for variance and error bars.
+    Prerequisite: diffs should be saved earlier using the
+    load_probabilities_and_get_variances function.
+    '''
     variances, lower_diffs, upper_diffs = find_variances_and_diffs(slurm_id, hidden_arr)
     plot_line_with_errbars(hidden_arr, variances, lower_diffs, upper_diffs,
         grid=True, xscale='log', ylabel='Variance', xlabel='Number of hidden units',
@@ -123,6 +142,9 @@ def plot_biases_with_diffs(slurm_id, hidden_arr, title, label="None"):
 
 
 def plot_variances_with_diffs_together(slurm_ids, hidden_arr, labels, title):
+    '''
+    Same as plot_variances_with_diffs but does the plotting for multiple slurm_ids.
+    '''
     for i, slurm_id in enumerate(slurm_ids):
         variances, lower_diffs, upper_diffs = find_variances_and_diffs(slurm_id, hidden_arr)
         plot_line_with_errbars(hidden_arr, variances, lower_diffs, upper_diffs,
