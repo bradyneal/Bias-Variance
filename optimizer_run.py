@@ -35,7 +35,7 @@ def val_cost_lbfgs(loglr, num_hidden, seed, maximize=True):
     print('learning rate:', lr)
     val_acc, _ = DataModelComp(ShallowNet(num_hidden), epochs=20, log_interval=None,
                                run_i=seed, train_val_split_seed=seed, seed=seed,
-                               bootstrap=True, batch_size=10, num_train_after_split=100,
+                               bootstrap=True, batch_size=100, num_train_after_split=100,
                                print_only_train_and_val_errors=True, print_all_errors=False, lr=lr, momentum=0.9,
                                plot_curves=False, save_best_model=True,
                                optimizer="lbfgs", max_iter=20, history_size=100).train()

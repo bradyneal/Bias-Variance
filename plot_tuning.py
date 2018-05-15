@@ -4,11 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/hyperparam_out'
-RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/adam'
+RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/lbfgs_opt'
 files_dir = os.listdir(RES_PATH)
 
 show_top = False
-optimizer = 'adam'
+optimizer = 'lbfgs'
 early_stopped = False
 
 if show_top:
@@ -45,8 +45,8 @@ for i in range(len(hidden_size_list)):
                  label='{}'.format(int(hidden_size_list[i])))
     plt.legend(loc=4)
     plt.xlabel('Best learning rate')
-    plt.xlim(xmax=10e-3)  # restrict x axis for readability
-    plt.xlim(xmin=10e-4)
+    #plt.xlim(xmax=10e-1)  # restrict x axis for readability
+    #plt.xlim(xmin=10e-5)
     plt.xscale("log")  # log scale
     plt.ylabel('Early stopped validation accuracy')
     plt.title('Best learning rates per network size for {}'.format(optimizer))
