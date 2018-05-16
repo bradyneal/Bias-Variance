@@ -4,11 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/hyperparam_out'
-RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/lbfgs_opt'
+RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/sgd_opt'
 files_dir = os.listdir(RES_PATH)
 
 show_top = False
-optimizer = 'lbfgs'
+optimizer = 'sgd'
 early_stopped = False
 
 if show_top:
@@ -16,9 +16,11 @@ if show_top:
 else:
     if optimizer == 'adam':
         to_plot = np.zeros([len(files_dir), 5*60*3, 5])  # size of table
-    elif optimizer == 'sgd' or optimizer == 'lbfgs':
+    elif optimizer == 'lbfgs':
         to_plot = np.zeros([len(files_dir), 5*20, 5])  # size of table
     elif optimizer == 'batch_gd':
+        to_plot = np.zeros([len(files_dir), 50, 5])  # size of table
+    elif optimizer == 'sgd':
         to_plot = np.zeros([len(files_dir), 50, 5])  # size of table
 
 hidden_size_list = []

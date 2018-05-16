@@ -6,7 +6,8 @@ from shutil import copy2
 
 
 def get_model_dir(username):
-    return os.path.join('/data/milatmp1', username, 'information-paths/saved/models')
+    #return os.path.join('/data/milatmp1', username, 'information-paths/saved/models')
+    return os.path.join(os.getcwd(), 'saved/models')
 
 
 def copy(old_slurm_id, new_slurm_id, load_user_id, saved_user_id):

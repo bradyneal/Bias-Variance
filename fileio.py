@@ -12,8 +12,8 @@ from models import ShallowNet
 
 USERNAME = getpass.getuser()
 
-OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
-#OUTPUT_DIR = os.getcwd()  # for cedar/graham
+#OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+OUTPUT_DIR = os.getcwd()  # for cedar/graham
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
@@ -315,9 +315,10 @@ def get_filename(num_hidden, i, slurm_id, inter=0):
     """
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
-    if int(slurm_id) > 161000:
-        return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
-    return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+    #if int(slurm_id) > 161000:
+    #    return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
+    #return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+    return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
 
 
 def get_train_test_modifiers(modifier=None):

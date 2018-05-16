@@ -7,4 +7,4 @@ echo Running on $HOSTNAME
 
 source activate inf-path
 
-python optimizer_run.py $@
+python lbfgs_runs.py $@
