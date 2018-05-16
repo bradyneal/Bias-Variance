@@ -217,6 +217,7 @@ class DataModelComp:
 
             if train_to_overfit:
                 # check if likely to be over by evaluating first batch only
+                got_here = False
                 for data, target in self.train_loader:
                     if self.cuda:
                         data, target = data.cuda(), target.cuda()
@@ -225,15 +226,16 @@ class DataModelComp:
                     pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
                     batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
                     num_correct = batch_correct.sum()
+                    got_here = True
                     break
-
-                if num_correct/data.shape[0] >= train_to_overfit:
-                    _, _, train_bitmap = self.evaluate_train(epoch)
-                    print('current train accuracy: {}'.format(train_bitmap.mean()))
-                    if train_bitmap.mean() >= train_to_overfit:
-                        break
-                else:
-                    print('current train accuracy (roughly): {}'.format(num_correct/data.shape[0]))
+                if got_here:
+                    if num_correct/data.shape[0] >= train_to_overfit:
+                        _, _, train_bitmap = self.evaluate_train(epoch)
+                        print('current train accuracy: {}'.format(train_bitmap.mean()))
+                        if train_bitmap.mean() >= train_to_overfit:
+                            break
+                    else:
+                        print('current train accuracy (roughly): {}'.format(num_correct/data.shape[0]))
 
             if eval_path:
                 train_bitmap, _, test_bitmap = self.get_bitmaps(self.num_train_after_split * epoch)

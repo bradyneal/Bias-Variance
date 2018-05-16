@@ -271,7 +271,7 @@ if run_exp_e:
                 data_model_comp = DataModelComp(net, batch_size=128, test_batch_size=128, epochs=200,
                                                 lr=lr_list[0], decay=True, step_size=1, gamma=0.95, momentum=0.9,
                                                 no_cuda=False, seed=i+start_seed, log_interval=1000,
-                                                run_i=i, save_interval=None, data='CIFAR10', corruption=corr)
+                                                run_i=i, save_interval=None, data='CIFAR10', to_exclude=corr)
                 _, _, steps = data_model_comp.train(eval_path=False, early_stopping=False,
                                                     train_to_overfit=label_corruption_threshold[0],
                                                     eval_train_every=False)
