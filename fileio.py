@@ -10,10 +10,12 @@ import numpy as np
 import pickle
 from models import ShallowNet
 
-USERNAME = getpass.getuser()
-
+#  for MILA
+#USERNAME = getpass.getuser()
 #OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
-OUTPUT_DIR = os.getcwd()  # for cedar/graham
+
+#  for cedar/graham
+OUTPUT_DIR = os.getcwd()
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
