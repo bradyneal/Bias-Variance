@@ -6,4 +6,4 @@ echo Running on $HOSTNAME
 
 source activate inf-path
 
-python information-paths/lbfgs_runs.py $@
+python information-paths/get_var.py $@

@@ -4,12 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/hyperparam_out'
-RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/sgd_opt'
+RES_PATH = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/lbfgs_opt'
 files_dir = os.listdir(RES_PATH)
 
 show_top = False
-optimizer = 'sgd'
-early_stopped = False
+optimizer = 'lbfgs'
+early_stopped = True
 
 if show_top:
     to_plot = np.zeros([len(files_dir), 5, 5])  # size of table
