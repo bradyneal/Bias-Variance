@@ -24,7 +24,7 @@ def plot_line_with_normal_errbars(x, y, y_std, label=None, xlabel=None,
         yerr = [1.96 * std for std in y_std]
     else:
         yerr = 1.96 * y_std
-    plt.errorbar(x, y, yerr=yerr, capsize=CAPSIZE, label=label, elinewidth=elinewidth)  # fmt=marker + '-', 
+    plt.errorbar(x, y, yerr=yerr, fmt=marker, capsize=CAPSIZE, label=label, elinewidth=elinewidth)
     run_fig_extras(xlabel, ylabel, title, filename, xscale, yscale, grid)
 
 
@@ -35,7 +35,7 @@ def plot_line_with_errbars(x, y, lowers, uppers, label=None, xlabel=None,
     Plot figure with error bars specified by lowers and uppers (more general than above).
     Save figure if filename specified; otherwise, show the figure.
     '''
-    plt.errorbar(x, y, yerr=[lowers, uppers], capsize=CAPSIZE, label=label, elinewidth=elinewidth)  # fmt=marker + '-',
+    plt.errorbar(x, y, yerr=[lowers, uppers], fmt=marker, capsize=CAPSIZE, label=label, elinewidth=elinewidth)
     run_fig_extras(xlabel, ylabel, title, filename, xscale, yscale, grid)
 
 
