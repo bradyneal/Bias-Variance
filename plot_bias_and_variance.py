@@ -2,6 +2,7 @@ from fileio import load_probabilities, save_variance_diffs, load_variance_diffs,
 import math
 import numpy as np
 from plotting import plot_line_with_errbars, plot_line_with_normal_errbars
+from parsing_train_error import parse_train_errors
 
 from test_y_onehot import get_test_y_onehot
 
@@ -107,9 +108,10 @@ def plot_losses_and_std(slurm_id, hidden_arr, label=None, marker=None):
 
 def load_train_losses_and_get_average_and_std(slurm_id, hidden_arr):
     average_losses, stds = [], []
-    for num_hidden in hidden_arr:
-        probabilities = load_probabilities(slurm_id, num_hidden)
-        losses = load_train_errors(slurm_id, num_hidden)
+    losses_all = parse_train_errors(slurm_id, hidden_arr)
+    for i, num_hidden in enumerate(hidden_arr):
+        # losses = load_train_errors(slurm_id, num_hidden)
+        losses = np.array(losses_all[i])
 
         average_loss = np.mean(losses)
         std = np.std(losses)/math.sqrt(len(losses))
