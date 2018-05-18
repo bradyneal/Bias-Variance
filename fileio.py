@@ -15,11 +15,14 @@ OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
+TRAIN_LOADER_DIR = os.path.join(SAVED_DIR, 'train_loader')
 PROB_DIR = os.path.join(SAVED_DIR, 'probabilities')
 VARIANCE_DIR = os.path.join(SAVED_DIR, 'variance')
 BIAS_DIR = os.path.join(SAVED_DIR, 'variance')
 DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
 HYPERPARAM_DIR = os.path.join(SAVED_DIR, 'hyperparam')
+CORRELATIONS_DIR = os.path.join(SAVED_DIR, 'correlations')
+TRAIN_ERRORS_DIR = os.path.join(SAVED_DIR, 'train_errors')
 BITMAP_DIRS = ['train_bitmaps', 'val_bitmaps', 'test_bitmaps']
 WEIGHT_DIR = os.path.join(SAVED_DIR, 'weights')
 PAIRWISE_DISTS_DIR = os.path.join(SAVED_DIR, 'pairwise_dists')
@@ -27,7 +30,8 @@ PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps')
 FINE_PATH_DIR = os.path.join(SAVED_DIR, 'path_bitmaps_fine')
 FINE_PATH_DIRS = [os.path.join(FINE_PATH_DIR, bitmap_dir) for bitmap_dir in BITMAP_DIRS]
 PATHS = [SAVED_DIR, MODEL_DIR, WEIGHT_DIR, PAIRWISE_DISTS_DIR, PATH_DIR,
-         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR, PROB_DIR, VARIANCE_DIR, BIAS_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
+         FINE_PATH_DIR, DATA_MODEL_COMP_DIR, HYPERPARAM_DIR, PROB_DIR, VARIANCE_DIR,
+         CORRELATIONS_DIR, BIAS_DIR, TRAIN_ERRORS_DIR, TRAIN_LOADER_DIR] + BITMAP_DIRS + FINE_PATH_DIRS
 
 OLD_COMMON_NAMING_FORMAT = 'shallow%d_run%d_job%s.pt'
 COMMON_NAMING_FORMAT = 'shallow%d_run%d_inter%d_job%s.pt'
@@ -59,6 +63,10 @@ def get_slurm_id():
 def save_data_model_comp(data_model_comp_obj, slurm_id=get_slurm_id(), inter=0):
     data_model_comp_path = get_data_model_comp_path(data_model_comp_obj.model.num_hidden, data_model_comp_obj.run_i, slurm_id, inter)
     pickle.dump(data_model_comp_obj, open(data_model_comp_path, 'wb'))
+
+
+def save_train_loader(slurm_id, train_loader):
+    pickle.dump(train_loader, open(get_train_loader_path(slurm_id), 'wb'))
 
 
 def save_shallow_net(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
@@ -96,6 +104,14 @@ def save_weights(weights, num_hidden, i, slurm_id):
     return torch.save(weights, get_weight_path(num_hidden, i, slurm_id))
 
 
+def save_weights_tensor(slurm_id, num_seeds, num_hidden, matrix_num, weights):
+    return torch.save(weights, get_weights_tensor_path(slurm_id, num_seeds, num_hidden, matrix_num))
+
+
+def save_train_errors(slurm_id, num_hidden, errors):
+    return np.save(get_train_errors_path(slurm_id, num_hidden), errors)
+
+
 def save_bitmap(bitmap, num_hidden, i, slurm_id, type):
     return torch.save(bitmap, get_bitmap_path(num_hidden, i, slurm_id, type))
 
@@ -116,6 +132,10 @@ def save_fine_path_bitmaps(bitmap, num_hidden, i, inter, type):
 
 def load_data_model_comp(num_hidden, i, slurm_id=get_slurm_id(), inter=0):
     return pickle.load(open(get_data_model_comp_path(num_hidden, i, slurm_id, inter), 'rb'))
+
+
+def load_train_loader(slurm_id):
+    return pickle.load(open(get_train_loader_path(slurm_id), 'rb'))
 
 
 def load_shallow_net(num_hidden, i, slurm_id, inter=0):
@@ -148,6 +168,14 @@ def load_bias_diffs(slurm_id, num_hidden):
 
 def load_weights(num_hidden, i, slurm_id):
     return load_torch(get_weight_path(num_hidden, i, slurm_id))
+
+
+def load_weights_tensor(slurm_id, num_seeds, num_hidden, matrix_num):
+    return load_torch(get_weights_tensor_path(slurm_id, num_seeds, num_hidden, matrix_num))
+
+
+def load_train_errors(slurm_id, num_hidden):
+    return np.load(get_train_errors_path(slurm_id, num_hidden))
 
 
 def load_bitmap(num_hidden, i, slurm_id, type):
@@ -239,6 +267,8 @@ def load_model_information():
 Functions that return the path for a specific directory
 """
 
+def get_train_loader_path(slurm_id):
+    return os.path.join(TRAIN_LOADER_DIR, '{}.p'.format(slurm_id))
 
 def get_hyperparam_main_plot_path(first_job_id, option):
     return os.path.join(HYPERPARAM_DIR, '{}_job{}.jpg'.format(option, first_job_id))
@@ -253,7 +283,7 @@ def get_probabilities_path(slurm_id, num_hidden):
 
 
 def get_correlations_path(slurm_id, matrix_num):
-    return os.path.join(PROB_DIR, '{}_job{}.npy'.format(matrix_num, slurm_id))
+    return os.path.join(CORRELATIONS_DIR, '{}_job{}.npy'.format(matrix_num, slurm_id))
 
 
 def get_variance_path(slurm_id, option):
@@ -277,6 +307,14 @@ def get_data_model_comp_path(num_hidden, i, slurm_id, inter=0):
 
 def get_model_path(num_hidden, i, slurm_id, inter=0):
     return get_path(MODEL_DIR, num_hidden, i, slurm_id, inter)
+
+
+def get_weights_tensor_path(slurm_id, num_seeds, num_hidden, matrix_num):
+    return os.path.join(MODEL_DIR, '{}_shallow{}_seeds{}_job{}.pt'.format(matrix_num, num_hidden, num_seeds, slurm_id))
+
+
+def get_train_errors_path(slurm_id, num_hidden):
+    return os.path.join(TRAIN_ERRORS_DIR, 'shallow{}_job{}.pt.npy'.format(num_hidden, slurm_id))
 
 
 def get_weight_path(num_hidden, i, slurm_id):
