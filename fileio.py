@@ -8,7 +8,7 @@ import torch
 import getpass
 import numpy as np
 import pickle
-from models import ShallowNet
+from models import ShallowNet, DeepNet
 
 USERNAME = getpass.getuser()
 OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
@@ -73,8 +73,13 @@ def save_shallow_net(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
     if isinstance(model, ShallowNet):
         return save_model(model, model.num_hidden, i, slurm_id, inter)
     else:
-        raise Exception('Naming convention for saving model not implemented for models other than ShallowNet')
+        raise Exception('Naming convention for saving model not implemented for models other than ShallowNet or DeepNet')
 
+def save_deep_net(model, num_hidden, num_layers,i, slurm_id=get_slurm_id(), inter=0):
+    if isinstance(model, DeepNet):
+        return save_model(model, model.num_layers, i, slurm_id, inter)
+    else:
+        raise Exception('Naming convention for saving model not implemented for models other than ShallowNet or DeepNet')
 
 def save_model(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
     return torch.save(model, get_model_path(num_hidden, i, slurm_id, inter))
@@ -138,9 +143,11 @@ def load_train_loader(slurm_id):
     return pickle.load(open(get_train_loader_path(slurm_id), 'rb'))
 
 
-def load_shallow_net(num_hidden, i, slurm_id, inter=0):
-    return load_model(num_hidden, i, slurm_id, inter)
+def load_shallow_net(num_hidden, num_layers, i, slurm_id, inter=0):
+    return load_model(num_layers, i, slurm_id, inter)
 
+def load_deep_net(num_hidden, num_layers, i, slurm_id, inter=0):
+    return load_model(num_layers, i, slurm_id, inter)
 
 def load_model(num_hidden, i, slurm_id, inter=0):
     return load_torch(get_model_path(num_hidden, i, slurm_id, inter))

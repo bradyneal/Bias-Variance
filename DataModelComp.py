@@ -11,8 +11,8 @@ from torchextra import SubsetSequentialSampler
 import matplotlib.pyplot as plt
 import os
 
-from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp, SAVED_DIR
-from models import ShallowNet
+from fileio import save_fine_path_bitmaps, save_shallow_net, save_deep_net, load_shallow_net, load_deep_net, save_data_model_comp, SAVED_DIR
+from models import ShallowNet, DeepNet
 
 
 class DataModelComp:
@@ -212,16 +212,25 @@ class DataModelComp:
                 # Saves best model so far
                 if self.save_best_model and self.accuracies[1][-1] > best_val_accuracy:
                     best_val_accuracy = self.accuracies[1][-1]
-                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-2)
+                    if isinstance(self.model, ShallowNet):
+                        save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=-2)
+                    elif isinstance(self.model, DeepNet):
+                        save_deep_net(self.model,self.model.num_hidden,self.model.num_layers, self.run_i, inter=-2)
 
             if self.print_all_errors:
                 self.accuracies[2].append(self.evaluate(epoch, type=2)[0])
 
             if self.save_model == "every_epoch":
-                save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
+                if isinstance(self.model, ShallowNet):
+                    save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
+                elif isinstance(self.model, DeepNet):
+                    save_deep_net(self.model, self.model.num_hidden, self.model.num_layers, self.run_i, inter=epoch)
 
         if self.save_model == "only_end":
-            save_shallow_net(self.model, self.model.num_hidden, self.run_i)
+            if isinstance(self.model, ShallowNet):
+                save_shallow_net(self.model, self.model.num_hidden, self.run_i)
+            elif isinstance(self.model, DeepNet):
+                save_deep_net(self.model, self.model.num_hidden, self.model.num_layers, self.run_i)
 
         if eval_path:
             return train_seq, test_seq
@@ -229,6 +238,8 @@ class DataModelComp:
 
         if isinstance(self.model, ShallowNet):
             print('Training complete!! For hidden size = {}'.format(self.model.num_hidden))
+        elif isinstance(self.model, DeepNet):
+            print('Training complete!! For {0} layers with hidden size {1}'.format(self.model.num_layers,self.model.num_hidden))
         else:
             print('Training complete!!')
 
@@ -248,6 +259,17 @@ class DataModelComp:
             if isinstance(e, FileNotFoundError):
                 print("Using inter 0 instead for num_hidden:", num_hidden)
                 self.model = load_shallow_net(num_hidden, run_i, slurm_id, 0)
+            else:
+                raise e
+
+    def load_saved_deep_net(self, num_hidden, num_layers, run_i, slurm_id, inter=0):
+        r"""To be used instead of train when loading a trained model"""
+        try:
+            self.model = load_deep_net(num_hidden, num_layers, run_i, slurm_id, inter)
+        except OSError as e:
+            if isinstance(e, FileNotFoundError):
+                print("Using inter 0 instead for num_hidden:", num_hidden)
+                self.model = load_deep_net(num_hidden, num_layers, run_i, slurm_id, 0)
             else:
                 raise e
 

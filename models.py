@@ -8,7 +8,6 @@ from copy import deepcopy
 MNIST_D = 784   # 28 x 28
 MNIST_K = 10
 
-
 def get_inter_model(model1, model2, theta):
     inter_model = deepcopy(model1)
     for p1, p2, inter_p in zip(model1.parameters(), model2.parameters(), inter_model.parameters()):
@@ -81,6 +80,27 @@ class MinDeepNet(nn_custom_super):
         out = self.fc3(h2)
         return F.log_softmax(out)
 
+class DeepNet(nn_custom_super):
+    """Neural Net with num_layers layers"""
+
+    def __init__(self,num_hidden,num_layers):
+        super(DeepNet,self).__init__()
+        num_hidden = int(num_hidden)
+        num_layers = int(num_layers)
+        self.num_hidden = num_hidden
+        self.num_layers = num_layers
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(MNIST_D,num_hidden))
+        for i in range(num_layers-1):
+            self.layers.append(nn.Linear(num_hidden,num_hidden))
+        self.layers.append(nn.Linear(num_hidden,MNIST_K))
+
+    def forward(self,x):
+        x = x.view(-1,MNIST_D)
+        h = [F.relu(self.layers[0](x))]
+        for layer in self.layers[1:]:
+            h.append(F.relu(layer(h[-1])))
+        return F.log_softmax(h[-1])
 
 class ExampleNet(nn_custom_super):
     """Neural network from the copied PyTorch example"""
