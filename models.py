@@ -98,7 +98,7 @@ class DeepNet(nn_custom_super):
     def forward(self,x):
         x = x.view(-1,MNIST_D)
         h = [F.relu(self.layers[0](x))]
-        for layer in self.layers[1:]:
+        for layer in self.layers[1:-1]:
             h.append(F.relu(layer(h[-1])))
         return F.log_softmax(h[-1])
 
