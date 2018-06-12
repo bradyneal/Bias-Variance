@@ -18,10 +18,10 @@ def calculate_bias(bitmaps, mean):
     y_onehot.zero_()
     y_onehot.scatter_(1, bitmaps.unsqueeze(1), 1)
 
-    bias = torch.mean(mean - y_onehot)
+    bias = torch.mean((mean - y_onehot)**2)
     return bias
 
-OUTPUT_DIR = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/matt_folder'
+OUTPUT_DIR = '/media/mattscicluna/Backups/Projects/CourseWork-MILA/IFT6085/inf-paths-results/zhang_model_to_exclude'
 corr_list = os.listdir(OUTPUT_DIR)
 variances_by_corr_corrupt = []
 variances_by_corr_normal = []
