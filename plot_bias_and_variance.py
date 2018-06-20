@@ -101,8 +101,8 @@ def load_probabilities_and_get_losses_and_std(slurm_id, hidden_arr):
 def plot_losses_and_std(slurm_id, hidden_arr, label=None, marker=None):
     average_losses, stds = load_probabilities_and_get_losses_and_std(slurm_id, hidden_arr)
     plot_line_with_normal_errbars(hidden_arr, average_losses, stds,
-        xlabel='Number of hidden units', ylabel='Average loss on test data',
-        grid=True, xscale='log', label=label,
+        xlabel='Number of hidden layers', ylabel='Average loss on test data',
+        grid=True, xscale='linear', label=label,
         filename='plots/{}_test_error.pdf'.format(slurm_id), marker=marker)
 
 
@@ -144,6 +144,7 @@ def find_variances_and_diffs(slurm_id, hidden_arr):
         diffs = load_variance_diffs(slurm_id, num_hidden)
         print(np.mean(np.array(diffs)))
         diffs = list(sorted(diffs))
+        print(diffs)
 
         upper_diff = get_percentile(diffs, 0.995)
         lower_diff = -get_percentile(diffs, 0.005)
@@ -188,15 +189,18 @@ def plot_variances_with_diffs(slurm_id, hidden_arr, title=None, label=None, mark
     load_probabilities_and_get_variances function.
     '''
     variances, lower_diffs, upper_diffs = find_variances_and_diffs(slurm_id, hidden_arr)
+    print(variances)
+    print(lower_diffs)
+    print(upper_diffs)
     plot_line_with_errbars(hidden_arr, variances, lower_diffs, upper_diffs,
-        grid=True, xscale='log', ylabel='Variance', xlabel='Number of hidden units',
+        grid=True, xscale='linear', ylabel=None, xlabel='Number of hidden layers',
         filename='plots/{}_variance.pdf'.format(slurm_id), title=title, label=label, marker=marker)
 
 
 def plot_biases_with_diffs(slurm_id, hidden_arr, title=None, label=None, marker=None):
     variances, lower_diffs, upper_diffs = find_biases_and_diffs(slurm_id, hidden_arr)
     plot_line_with_errbars(hidden_arr, variances, lower_diffs, upper_diffs,
-        grid=True, xscale='log', ylabel='Bias and Variance', xlabel='Number of hidden units',
+        grid=True, xscale='linear', ylabel=None, xlabel='Number of hidden layers',
         filename='plots/{}_bias.pdf'.format(slurm_id), title=title, label=label, marker=marker)
 
 

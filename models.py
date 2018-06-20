@@ -93,15 +93,23 @@ class DeepNet(nn_custom_super):
         self.layers.append(nn.Linear(MNIST_D,num_hidden))
         for i in range(num_layers-1):
             self.layers.append(nn.Linear(num_hidden,num_hidden))
-        self.layers.append(nn.Linear(num_hidden,MNIST_K))
+        self.output = nn.Linear(num_hidden,MNIST_K)
 
     def forward(self,x):
         x = x.view(-1,MNIST_D)
         h = [F.relu(self.layers[0](x))]
         for layer in self.layers[1:]:
             h.append(F.relu(layer(h[-1])))
-        return F.log_softmax(h[-1])
+        out = self.output(h[-1])
+        return F.log_softmax(out,dim=1)
 
+    def get_weight_norms(self, p=2):
+        nn_linears = self.layers
+        weights_arr = [next(nn_linear.parameters()) for nn_linear in nn_linears]
+        weights_arr = weights_arr + [next(self.output.parameters())]
+        weight_norms = [weights.norm(p) for weights in weights_arr]
+        return weight_norms
+                                            
 class ExampleNet(nn_custom_super):
     """Neural network from the copied PyTorch example"""
 

@@ -30,7 +30,7 @@ def plot_line_with_normal_errbars(x, y, y_std, label=None, xlabel=None,
 
 def plot_line_with_errbars(x, y, lowers, uppers, label=None, xlabel=None,
     ylabel=None, title=None, filename=None, xscale=XSCALE_DEF, yscale=YSCALE_DEF,
-    grid=GRID_DEF, elinewidth=None, marker=None):
+    grid=GRID_DEF, elinewidth=None, marker='*'):
     '''
     Plot figure with error bars specified by lowers and uppers (more general than above).
     Save figure if filename specified; otherwise, show the figure.

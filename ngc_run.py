@@ -1,5 +1,5 @@
 import argparse
-from models import ShallowNet
+from models import ShallowNet,DeepNet
 from DataModelComp import DataModelComp
 
 parser = argparse.ArgumentParser()
@@ -7,7 +7,8 @@ parser = argparse.ArgumentParser()
 # Essential for each experiment
 parser.add_argument('--hidden_arr', nargs='+', type=int, default=[1, 2, 5, 25])
 parser.add_argument('--seed', type=int)
-parser.add_argument('--num_seeds', type=int, default=2)
+parser.add_argument('--end_seed', type=int, default=51)
+parser.add_argument('--num_layers',type=int, nargs='+', default=[1,2,3,4,5])
 
 # Needed for hyperparameter tuning
 parser.add_argument('--learning_rate', nargs='+', type=float, default=[0.1])
@@ -17,7 +18,7 @@ parser.add_argument('--momentum', type=float, default=0.9)
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--size_of_one_pass', type=int)
 parser.add_argument('--variance_over', choices=["all", "initialization", "sampling"], default="all")
-parser.add_argument('--num_train_after_split', type=int)
+parser.add_argument('--num_train_after_split', type=int,default=None)
 parser.add_argument('--no_bootstrap', action="store_true")
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
@@ -50,15 +51,15 @@ if args.print_errors == "train_and_val":
 if args.seed is not None:
     seeds = [args.seed]
 else:
-    seeds = range(args.start_seed, args.num_seeds)
+    seeds = range(args.start_seed, args.end_seed)
 
 for seed in seeds:
-    for i, num_hidden in enumerate(args.hidden_arr):
-        if len(args.learning_rate) == len(args.hidden_arr):
+    for i, num_layer in enumerate(args.num_layers):
+        if len(args.learning_rate) == len(args.num_layers):
             lr = args.learning_rate[i]
         else:
             lr = args.learning_rate[0]
-        print(DataModelComp(ShallowNet(num_hidden), epochs=args.max_epochs,
+        print(DataModelComp(DeepNet(100,num_layer), epochs=args.max_epochs,
             run_i=seed, bootstrap=(not args.no_bootstrap), batch_size=args.batch_size,
             size_of_one_pass=args.size_of_one_pass,
             train_val_split_seed=0 if args.variance_over is "initialization" else seed,

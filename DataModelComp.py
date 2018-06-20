@@ -8,8 +8,11 @@ from torch.autograd import Variable
 import numpy as np
 from collections import deque
 from torchextra import SubsetSequentialSampler
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 from fileio import save_fine_path_bitmaps, save_shallow_net, save_deep_net, load_shallow_net, load_deep_net, save_data_model_comp, SAVED_DIR
 from models import ShallowNet, DeepNet
@@ -174,20 +177,32 @@ class DataModelComp:
                 self.num_saved_iters += 1
 
     def plot_training_curves(self):
-        x = list(range(self.epochs))
+        x = list(range(len(self.accuracies[0])))
         plt.plot(x, [1 - acc for acc in self.accuracies[0]])
         plt.plot(x, [1 - acc for acc in self.accuracies[1]])
         plt.plot(x, [1 - acc for acc in self.accuracies[2]])
         plt.title('Learning curves')
         plt.xlabel('epochs')
         plt.ylabel('error')
+        # plt.legend(['train','val'],loc='upper right')
         plt.legend(['train', 'val', 'test'], loc='upper right')
-        plt.savefig(os.path.join(SAVED_DIR, 'train_curves.jpg'))
+        if isinstance(self.model,DeepNet):
+            plt.savefig(os.path.join(SAVED_DIR, 'lr={0}_train_curves_{1}_{2}.jpg'.format(self.lr,self.model.num_layers,self.model.num_hidden)))
+        else:
+            plt.savefig(os.path.join(SAVED_DIR, 'train_curves_{}.jpg'.format(self.model.num_hidden)))
+        plt.close()
 
     def print_validation_accs(self):
         print('Validation list:', self.accuracies[1])
         print('Best validation acc:', max(self.accuracies[1]))
         print('Last validation acc:', self.accuracies[1][-1])
+
+    def write_validation_accs(self):
+        with open(os.path.join(SAVED_DIR,"Accuracies.txt"),'a') as f:
+            f.write('Learning Rate: {0}, Width: {1}, Layers: {2}\n'.format(self.lr,self.model.num_hidden,self.model.num_layers))
+            # f.write('Validation list: {}\n'.format(self.accuracies[1]))
+            f.write('Best validation acc: {}\n'.format(max(self.accuracies[1])))
+            f.write('Last validation acc: {}\n\n'.format(self.accuracies[1][-1]))
 
     def train(self, epochs=None, eval_path=False):
         print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}, seed: {}"
@@ -207,7 +222,10 @@ class DataModelComp:
 
             if self.print_only_train_and_val_errors or self.print_all_errors:
                 for i in range(2):
-                    self.accuracies[i].append(self.evaluate(epoch, type=i)[0])
+                    theta = self.evaluate(epoch,type=i)
+                    self.accuracies[i].append(theta[0])
+                    if i == 0:
+                        avg_loss = theta[1]
 
                 # Saves best model so far
                 if self.save_best_model and self.accuracies[1][-1] > best_val_accuracy:
@@ -225,6 +243,9 @@ class DataModelComp:
                     save_shallow_net(self.model, self.model.num_hidden, self.run_i, inter=epoch)
                 elif isinstance(self.model, DeepNet):
                     save_deep_net(self.model, self.model.num_hidden, self.model.num_layers, self.run_i, inter=epoch)
+            if avg_loss < 5e-5:
+                print("Reached epsilon loss criteria")
+                break
 
         if self.save_model == "only_end":
             if isinstance(self.model, ShallowNet):
@@ -244,6 +265,7 @@ class DataModelComp:
             print('Training complete!!')
 
         self.print_validation_accs()
+        self.write_validation_accs()
         if self.plot_curves:
             self.plot_training_curves()
 
@@ -290,9 +312,11 @@ class DataModelComp:
         for data, target in data_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
+            with torch.no_grad():
+                data = Variable(data)
+            target = Variable(target)
             prob = self.model(data)
-            total_loss += F.nll_loss(prob, target, size_average=False).data[0]  # sum up batch loss
+            total_loss += F.nll_loss(prob, target, size_average=False).item()  # sum up batch loss
             pred = prob.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)

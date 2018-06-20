@@ -10,5 +10,5 @@ for seed in range(50):
     for num_hidden in small_hidden_layer_sizes:
         print("Running for hidden size: %d" % (num_hidden))
         print(DataModelComp(ShallowNet(num_hidden), epochs=50, log_interval=None,
-              run_i=seed, train_val_split_seed=seed, save_all_at_end=True, seed=seed,
-              bootstrap=True, batch_size=100).train())
+              run_i=seed, train_val_split_seed=seed, seed=seed,
+              bootstrap=True, batch_size=100, print_all_errors=True).train())
