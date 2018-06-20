@@ -9,16 +9,19 @@ import getpass
 import numpy as np
 import pickle
 from models import ShallowNet
+from tensorboardX import SummaryWriter
 
 USERNAME = getpass.getuser()
 OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
+FINAL_TENSORBOARD_DIR = os.path.join(SAVED_DIR, 'tensorboard')
+TMP_TENSORBOARD_DIR = os.path.join('/tmp', USERNAME, 'tensorboard')
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 TRAIN_LOADER_DIR = os.path.join(SAVED_DIR, 'train_loader')
 PROB_DIR = os.path.join(SAVED_DIR, 'probabilities')
 VARIANCE_DIR = os.path.join(SAVED_DIR, 'variance')
-BIAS_DIR = os.path.join(SAVED_DIR, 'variance')
+BIAS_DIR = os.path.join(SAVED_DIR, 'bias')
 DATA_MODEL_COMP_DIR = os.path.join(SAVED_DIR, 'data_model_comps')
 HYPERPARAM_DIR = os.path.join(SAVED_DIR, 'hyperparam')
 CORRELATIONS_DIR = os.path.join(SAVED_DIR, 'correlations')
@@ -55,6 +58,21 @@ def get_slurm_id():
         return os.environ["SLURM_JOB_ID"]
     except:
         return 0
+
+def create_summary_writer():
+    return SummaryWriter(get_tmp_tensorboard_dir(), max_queue=100000)
+
+
+def move_tensorboard_dir():
+    final_tensorboard_dir = os.path.join(FINAL_TENSORBOARD_DIR, str(get_slurm_id()))
+    tmp_tensorboard_dir = get_tmp_tensorboard_dir()
+    for src_file in os.listdir(tmp_tensorboard_dir):
+        src_file_path = os.path.join(tmp_tensorboard_dir, src_file)
+        os.rename(src_file_path, final_tensorboard_dir)
+
+
+def get_tmp_tensorboard_dir():
+    return os.path.join(TMP_TENSORBOARD_DIR, str(get_slurm_id()))
 
 
 """Specific saving functions"""

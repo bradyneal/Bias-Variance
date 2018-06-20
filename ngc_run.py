@@ -22,6 +22,7 @@ parser.add_argument('--no_bootstrap', action="store_true")
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
 parser.add_argument('--save_best_model', action="store_true")
+parser.add_argument('--dataset', choices=["MNIST", "CIFAR"], default="MNIST")
 
 # Parameter to split it
 parser.add_argument('--start_seed', type=int, default=0)
@@ -58,7 +59,7 @@ for seed in seeds:
             lr = args.learning_rate[i]
         else:
             lr = args.learning_rate[0]
-        print(DataModelComp(ShallowNet(num_hidden), epochs=args.max_epochs,
+        print(DataModelComp(ShallowNet(num_hidden, args.dataset), epochs=args.max_epochs,
             run_i=seed, bootstrap=(not args.no_bootstrap), batch_size=args.batch_size,
             size_of_one_pass=args.size_of_one_pass,
             train_val_split_seed=0 if args.variance_over is "initialization" else seed,
@@ -66,4 +67,4 @@ for seed in seeds:
             lr=lr, momentum=args.momentum,
             print_all_errors=print_all_errors, print_only_train_and_val_errors=print_only_train_and_val_errors,
             num_train_after_split=args.num_train_after_split, save_model=args.save_model, save_best_model=args.save_best_model,
-            decay=args.decay, gamma=args.gamma, no_cuda=args.no_cuda).train())
+            decay=args.decay, gamma=args.gamma, no_cuda=args.no_cuda, dataset=args.dataset).train())

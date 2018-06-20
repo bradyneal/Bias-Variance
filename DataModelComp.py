@@ -10,8 +10,9 @@ from collections import deque
 from torchextra import SubsetSequentialSampler
 import matplotlib.pyplot as plt
 import os
+import sys
 
-from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp, SAVED_DIR
+from fileio import save_fine_path_bitmaps, save_shallow_net, load_shallow_net, save_data_model_comp, SAVED_DIR, save_train_loader, create_summary_writer, move_tensorboard_dir
 from models import ShallowNet
 
 
@@ -29,7 +30,7 @@ class DataModelComp:
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
                  size_of_one_pass=None, plot_curves=False,
-                 save_model="only_end", save_best_model=False):
+                 save_model="only_end", save_best_model=False, dataset="MNIST"):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.epochs = epochs
@@ -53,6 +54,8 @@ class DataModelComp:
         self.size_of_one_pass = size_of_one_pass
         self.plot_curves = plot_curves
         self.save_best_model = save_best_model
+        self.dataset = dataset
+        # self.writer = create_summary_writer()
 
         if self.cuda:
             print('Using CUDA')
@@ -95,16 +98,27 @@ class DataModelComp:
         if self.save_obj:
             save_data_model_comp(self)
 
+    def get_datasets(self, dataset_function, transform):
+        data_dir = os.path.join('data', self.dataset)
+        train = dataset_function(data_dir, train=True, download=True,
+                                 transform=transform)
+        test = dataset_function(data_dir, train=False, download=True,
+                                transform=transform)
+        return train, test
+
     def get_data_loaders(self, same_dist=False):
         kwargs = {'num_workers': 1, 'pin_memory': True} if self.cuda else {}
         transform = transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])
-        train = datasets.MNIST('./data', train=True, download=True,
-                               transform=transform)
-        test = datasets.MNIST('./data', train=False, download=True,
-                              transform=transform)
+
+        if self.dataset == 'MNIST':
+            train, test = self.get_datasets(datasets.MNIST, transform)
+        elif self.dataset == 'CIFAR10':
+            train, test = self.get_datasets(datasets.CIFAR10, transform)
+        elif self.dataset == 'CIFAR100':
+            train, test = self.get_datasets(datasets.CIFAR100, transform)
 
         np.random.seed(self.train_val_split_seed)
 
@@ -283,6 +297,12 @@ class DataModelComp:
 
         avg_loss = total_loss / num_to_evaluate_on
         acc = num_correct / num_to_evaluate_on
+
+        prefix = os.path.join(str(self.model.num_hidden), str(self.seed) if self.seed else str(self.train_val_split_seed))
+        type_strings = ['train', 'validation', 'test']
+        # self.writer.add_scalar(os.path.join(prefix, 'accuracy', type_strings[type]), acc, cur_epochs)
+        # self.writer.add_scalar(os.path.join(prefix, 'loss', type_strings[type]), avg_loss, cur_epochs)
+
         print('\nAfter {} epochs ({} iterations), {} set: Average loss: {:.4f},Accuracy: {}/{} ({:.2f}%)\n'.format(cur_epochs,
               self.num_train_after_split * cur_epochs, ['Training', 'Validation', 'Test'][type],
               avg_loss, num_correct, num_to_evaluate_on, 100. * acc))
@@ -291,3 +311,6 @@ class DataModelComp:
             return acc, avg_loss, correct, probs
         else:
             return acc, avg_loss, correct
+
+    # def __del__(self):
+    #     move_tensorboard_dir()

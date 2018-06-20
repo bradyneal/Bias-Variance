@@ -3,11 +3,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import sys
 from copy import deepcopy
 
 MNIST_D = 784   # 28 x 28
 MNIST_K = 10
 
+CIFAR10_D = 3*1024
+CIFAR10_K = 10
 
 def get_inter_model(model1, model2, theta):
     inter_model = deepcopy(model1)
@@ -45,15 +48,22 @@ class Linear(nn_custom_super):
 class ShallowNet(nn_custom_super):
     """Shallow neural network"""
 
-    def __init__(self, num_hidden):
+    def __init__(self, num_hidden, dataset='MNIST'):
         super(ShallowNet, self).__init__()
         num_hidden = int(num_hidden)
         self.num_hidden = num_hidden
-        self.fc1 = nn.Linear(MNIST_D, num_hidden)
-        self.fc2 = nn.Linear(num_hidden, MNIST_K)
+        if dataset == 'MNIST':
+            self.input_dimension = MNIST_D
+            self.output_dimension = MNIST_K
+        elif dataset == 'CIFAR10':
+            self.input_dimension = CIFAR10_D
+            self.output_dimension = CIFAR10_K
+
+        self.fc1 = nn.Linear(self.input_dimension, num_hidden)
+        self.fc2 = nn.Linear(num_hidden, self.output_dimension)
 
     def forward(self, x):
-        x = x.view(-1, MNIST_D)
+        x = x.view(-1, self.input_dimension)
         h = F.relu(self.fc1(x))
         out = self.fc2(h)
         return F.log_softmax(out)
