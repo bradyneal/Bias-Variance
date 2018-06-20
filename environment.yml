@@ -9,5 +9,8 @@ dependencies:
   - scikit-learn
   - seaborn
   - pandas
+  - tensorflow
+  - seaborn
   - pip:
     - sigopt
+    - tensorboardX
