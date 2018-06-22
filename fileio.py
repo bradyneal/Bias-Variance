@@ -11,12 +11,18 @@ import pickle
 from models import ShallowNet
 from tensorboardX import SummaryWriter
 
-USERNAME = getpass.getuser()
-OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+# Hack
+try:
+    USERNAME = getpass.getuser()
+    OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+    TMP_TENSORBOARD_DIR = os.path.join('/tmp', USERNAME, 'tensorboard')
+except:
+    OUTPUT_DIR = os.getcwd()
+    TMP_TENSORBOARD_DIR = os.getcwd()
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 FINAL_TENSORBOARD_DIR = os.path.join(SAVED_DIR, 'tensorboard')
-TMP_TENSORBOARD_DIR = os.path.join('/tmp', USERNAME, 'tensorboard')
+
 MODEL_DIR = os.path.join(SAVED_DIR, 'models')
 TRAIN_LOADER_DIR = os.path.join(SAVED_DIR, 'train_loader')
 PROB_DIR = os.path.join(SAVED_DIR, 'probabilities')
@@ -58,6 +64,7 @@ def get_slurm_id():
         return os.environ["SLURM_JOB_ID"]
     except:
         return 0
+
 
 def create_summary_writer():
     return SummaryWriter(get_tmp_tensorboard_dir(), max_queue=100000)
