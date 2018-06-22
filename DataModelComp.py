@@ -29,7 +29,7 @@ class DataModelComp:
                  num_train_after_split=None, save_interval=None,
                  train_val_split_seed=0, bootstrap=False, save_obj=False,
                  print_all_errors=False, print_only_train_and_val_errors=False,
-                 size_of_one_pass=None, plot_curves=False,
+                 size_of_one_pass=None, plot_curves=False, log_tensorboard=False,
                  save_model="only_end", save_best_model=False, dataset="MNIST"):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
@@ -55,7 +55,10 @@ class DataModelComp:
         self.plot_curves = plot_curves
         self.save_best_model = save_best_model
         self.dataset = dataset
-        # self.writer = create_summary_writer()
+        self.log_tensorboard = log_tensorboard
+
+        if self.log_tensorboard:
+            self.writer = create_summary_writer()
 
         if self.cuda:
             print('Using CUDA')
@@ -250,7 +253,7 @@ class DataModelComp:
         if self.plot_curves:
             self.plot_training_curves()
 
-        return val_acc, self.num_train_after_split * epoch
+        return val_acc, best_val_accuracy, self.num_train_after_split * epoch
 
         # Return no of iterations - epoch * k / batch_size
 
@@ -300,8 +303,10 @@ class DataModelComp:
 
         prefix = os.path.join(str(self.model.num_hidden), str(self.seed) if self.seed else str(self.train_val_split_seed))
         type_strings = ['train', 'validation', 'test']
-        # self.writer.add_scalar(os.path.join(prefix, 'accuracy', type_strings[type]), acc, cur_epochs)
-        # self.writer.add_scalar(os.path.join(prefix, 'loss', type_strings[type]), avg_loss, cur_epochs)
+
+        if self.log_tensorboard:
+            self.writer.add_scalar(os.path.join(prefix, 'accuracy', type_strings[type]), acc, cur_epochs)
+            self.writer.add_scalar(os.path.join(prefix, 'loss', type_strings[type]), avg_loss, cur_epochs)
 
         print('\nAfter {} epochs ({} iterations), {} set: Average loss: {:.4f},Accuracy: {}/{} ({:.2f}%)\n'.format(cur_epochs,
               self.num_train_after_split * cur_epochs, ['Training', 'Validation', 'Test'][type],
@@ -312,5 +317,6 @@ class DataModelComp:
         else:
             return acc, avg_loss, correct
 
-    # def __del__(self):
-    #     move_tensorboard_dir()
+    def __del__(self):
+        if self.log_tensorboard:
+            move_tensorboard_dir()

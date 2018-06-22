@@ -22,7 +22,8 @@ parser.add_argument('--no_bootstrap', action="store_true")
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
 parser.add_argument('--save_best_model', action="store_true")
-parser.add_argument('--dataset', choices=["MNIST", "CIFAR"], default="MNIST")
+parser.add_argument('--dataset', choices=["MNIST", "CIFAR10"], default="MNIST")
+parser.add_argument('--log_tensorboard', action="store_true")
 
 # Parameter to split it
 parser.add_argument('--start_seed', type=int, default=0)
@@ -67,4 +68,4 @@ for seed in seeds:
             lr=lr, momentum=args.momentum,
             print_all_errors=print_all_errors, print_only_train_and_val_errors=print_only_train_and_val_errors,
             num_train_after_split=args.num_train_after_split, save_model=args.save_model, save_best_model=args.save_best_model,
-            decay=args.decay, gamma=args.gamma, no_cuda=args.no_cuda, dataset=args.dataset).train())
+            decay=args.decay, gamma=args.gamma, no_cuda=args.no_cuda, dataset=args.dataset, log_tensorboard=args.log_tensorboard).train())
