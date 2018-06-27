@@ -32,6 +32,17 @@ ADD_PARAMS_MSGS = 'Starting exp'
 NEXT_EXPERIMENT_MSG = 'Suggestion:'
 LR_MESSAGE = 'learning rate: '
 
+def parse_accuracy(line):
+    try:
+        val_acc = float(line.split(':')[1].strip())
+    except ValueError:
+        if line.split(':')[1].strip().startswith('tensor'):
+            val_acc = float(line.split(':')[1].strip()[7:-1])
+        else:
+            raise ValueError
+    return val_acc
+
+
 def parse_validations_table(filename):
     '''
     Parse and read the best validation accuracy, last validation accuracy,
@@ -55,9 +66,9 @@ def parse_validations_table(filename):
             #    val_list_str = line.split(':')[1].strip().lstrip('[').rstrip(']')
             #    val_list = [float(acc) for acc in val_list_str.split(',')]
             if line.startswith(BEST_VAL_MARK):
-                best_val_acc = float(line.split(':')[1].strip())
+                best_val_acc = parse_accuracy(line)
             elif line.startswith(LAST_VAL_MARK):
-                last_val_acc = float(line.split(':')[1].strip())
+                last_val_acc = parse_accuracy(line)
             elif line.startswith(ADD_PARAMS_MSGS):
                 hidden_size, seed = line.split('size')[1].strip().split('with seed')
                 hidden_size, seed = float(hidden_size.strip()), float(seed.strip())
@@ -72,3 +83,7 @@ def parse_validations_table(filename):
         formatted_output = output[sidx[idx]]
 
     return formatted_output, output, hidden_size
+
+if __name__ == '__main__':
+    filename = 'slurm-202405.out'
+    arr = parse_validations_table(filename)
