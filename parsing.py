@@ -47,7 +47,7 @@ def parse_accuracy(line):
     return val_acc
 
 
-def parse_validations_table(filename, hidden_arr):
+def parse_validations_table(filename):
     '''
     Parse and read the best validation accuracy, last validation accuracy,
     and list of validation accuracies (for each epoch) for output file
@@ -82,9 +82,11 @@ def parse_validations_table(filename, hidden_arr):
                 output.append([learning_rate, best_val_acc, last_val_acc, hidden_size, seed])
         output = np.array(output)
         formatted_output = []
-        for val in hidden_arr:
+        for val in np.unique(output[:, 3]):
+            #  restrict to only networks of specific size
             new_out = output[output[:, 3] == val, :]
-            sidx = np.lexsort(output[:, [2, 4]].T)
+            #  collect seeds with highest
+            sidx = np.lexsort(new_out[:, [2, 4]].T)
             idx = np.append(np.flatnonzero(new_out[1:, 4] > new_out[:-1, 4]), new_out.shape[0] - 1)
             formatted_output.extend(new_out[sidx[idx]])
 
@@ -105,13 +107,12 @@ def plot_formatted_output(formatted_output):
 
 
 if __name__ == '__main__':
-    slurm_ids = [200631, 202405, 202408]
+    slurm_ids = [202408, 200631]
     formatted_outputs = None
-    hidden_arrs = [[1, 2, 5, 25, 100, 500, 2500, 10000], [1, 2, 5, 25, 100, 500, 2500, 10000], [40000]]
-    for slurm_id, hidden_arr in zip(slurm_ids, hidden_arrs):
+    for slurm_id in slurm_ids:
         print('Parsing {}'.format(slurm_id))
         filename = 'slurm-{}.out'.format(slurm_id)
-        formatted_output, _, _ = parse_validations_table(filename, hidden_arr)
+        formatted_output, _, _ = parse_validations_table(filename)
         formatted_outputs = np.append(
             formatted_outputs, formatted_output, axis=0
             ) if formatted_outputs is not None else formatted_output
