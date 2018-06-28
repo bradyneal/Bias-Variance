@@ -1,6 +1,7 @@
 '''
 Module for parsing functions
 '''
+import numpy as np
 
 BEST_VAL_MARK = 'Best validation acc:'
 LAST_VAL_MARK = 'Last validation acc:'
@@ -14,6 +15,7 @@ def parse_validations(filename):
     val_list = []
     best_val_acc = -1
     last_val_acc = -1
+
     with open(filename, 'r') as f:
         for line in f:
             if line.startswith(VAL_LIST_MARK):
@@ -24,3 +26,66 @@ def parse_validations(filename):
             elif line.startswith(LAST_VAL_MARK):
                 last_val_acc = float(line.split(':')[1].strip())
     return best_val_acc, last_val_acc, val_list
+
+
+ADD_PARAMS_MSGS = 'Starting exp'
+NEXT_EXPERIMENT_MSG = 'Suggestion:'
+LR_MESSAGE = 'learning rate: '
+
+def parse_accuracy(line):
+    try:
+        val_acc = float(line.split(':')[1].strip())
+    except ValueError:
+        if line.split(':')[1].strip().startswith('tensor'):
+            val_acc = float(line.split(':')[1].strip()[7:-1])
+        else:
+            raise ValueError
+    return val_acc
+
+
+def parse_validations_table(filename):
+    '''
+    Parse and read the best validation accuracy, last validation accuracy,
+    and list of validation accuracies (for each epoch) for output file
+    returns
+        - output: accuracies for every run
+        - formatted_output: Only the best (early stopped) accuracy per seed
+    This only works for one fixed size!
+    '''
+    output = []
+    val_list = []
+    best_val_acc = -1
+    last_val_acc = -1
+    seed = -1
+    hidden_size = -1
+    learning_rate = -1
+
+    with open(filename, 'r') as f:
+        for line in f:
+            #if line.startswith(VAL_LIST_MARK):
+            #    val_list_str = line.split(':')[1].strip().lstrip('[').rstrip(']')
+            #    val_list = [float(acc) for acc in val_list_str.split(',')]
+            if line.startswith(BEST_VAL_MARK):
+                best_val_acc = parse_accuracy(line)
+            elif line.startswith(LAST_VAL_MARK):
+                last_val_acc = parse_accuracy(line)
+            elif line.startswith(ADD_PARAMS_MSGS):
+                hidden_size, seed = line.split('size')[1].strip().split('with seed')
+                hidden_size, seed = float(hidden_size.strip()), float(seed.strip())
+            elif line.startswith(LR_MESSAGE):
+                learning_rate = float(line.split(':')[1].strip())
+            elif line.startswith(NEXT_EXPERIMENT_MSG):
+                output.append([learning_rate, best_val_acc, last_val_acc, hidden_size, seed])
+        output = np.array(output)
+        formatted_output = []
+        for val in [1, 2, 5, 25, 100, 500, 2500, 10000]:
+            new_out = output[output[:, 3] == val, :]
+            sidx = np.lexsort(output[:, [1, 4]].T)
+            idx = np.append(np.flatnonzero(new_out[1:, 4] > new_out[:-1, 4]), new_out.shape[0] - 1)
+            formatted_output.extend(new_out[sidx[idx]])
+
+    return np.array(formatted_output), output, hidden_size
+
+if __name__ == '__main__':
+    filename = 'slurm-202408.out'
+    arr = parse_validations_table(filename)
