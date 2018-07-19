@@ -209,6 +209,8 @@ class DataModelComp:
     def train(self, epochs=None, eval_path=False):
         print("Learning rate: {}, momentum: {}, number of training examples: {}, epochs: {}, seed: {}"
               .format(self.lr, self.momentum, self.num_train_after_split, epochs if epochs else self.epochs, self.seed))
+        print("Train val split seed: {}, initialization seed: {}, run_i: {}"
+              .format(self.train_val_split_seed, self.seed, self.run_i))
         if eval_path:
             train_bitmap = self.evaluate(0, type=0)[2]
             test_bitmap = self.evaluate(0, type=2)[2]
