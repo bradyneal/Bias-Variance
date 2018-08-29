@@ -1,8 +1,8 @@
 from fileio import load_probabilities, save_variance_diffs, load_variance_diffs, save_bias_diffs, load_bias_diffs, load_train_errors
 import math
 import numpy as np
-from plotting import plot_line_with_errbars, plot_line_with_normal_errbars
-from parsing_train_error import parse_train_errors
+from plotting import plot_line_with_errbars, plot_line_with_normal_errbars, plot_line
+# from parsing_train_error import parse_train_errors, parse_167550
 
 from test_y_onehot import get_test_y_onehot
 
@@ -57,12 +57,58 @@ def load_probabilities_and_get_variances(slurm_id, hidden_arr, num_bootstrap=100
         diffs = []
         for i in range(num_bootstrap):
             indices = np.random.choice(50, 50, replace=True)
+            if slurm_id == 195683:
+                indices = np.random.choice(28, 28, replace=True)
+            elif slurm_id == 195684:
+                indices = np.random.choice(43, 43, replace=True)
             bootstrap_probabilities = probabilities[indices]
             bootstrap_variance = calculate_variance(bootstrap_probabilities)
             diff_variance = (bootstrap_variance - original_variance)
             diffs.append(diff_variance)
 
         save_variance_diffs(slurm_id, num_hidden, diffs)
+
+
+def find_probabilities_for_sampling(probabilities, sampling_no, num_initializations_per_split):
+    return probabilities[sampling_no * num_initializations_per_split:
+        (sampling_no+1) * num_initializations_per_split]
+
+
+def load_probabilities_and_get_first_term(slurm_id, hidden_arr, num_initializations_per_split):
+    first_terms = []
+    for num_hidden in hidden_arr:
+        probabilities = load_probabilities(slurm_id, num_hidden)
+
+        num_samplings = probabilities.shape[0] // num_initializations_per_split
+        individual_variances = []
+        for sampling_no in range(num_samplings):
+            probabilities_for_this_sampling = find_probabilities_for_sampling(probabilities, sampling_no, num_initializations_per_split)
+            individual_variance = calculate_variance(probabilities_for_this_sampling)
+            individual_variances.append(individual_variance)
+
+        first_terms.append(np.mean(np.array(individual_variances)))
+    return first_terms
+
+
+def load_probabilities_and_get_second_term(slurm_id, hidden_arr, num_initializations_per_split):
+    second_terms = []
+    for num_hidden in hidden_arr:
+        probabilities = load_probabilities(slurm_id, num_hidden)
+
+        num_samplings = probabilities.shape[0] // num_initializations_per_split
+
+        expected_probabilities_shape = list(probabilities.shape)
+        expected_probabilities_shape[0] = num_samplings
+
+        expected_probabilities = np.zeros(expected_probabilities_shape)
+
+        for sampling_no in range(num_samplings):
+            probabilities_for_this_sampling = find_probabilities_for_sampling(probabilities, sampling_no, num_initializations_per_split)
+            expected_probabilities[sampling_no] = np.mean(probabilities_for_this_sampling, 0)
+
+        second_terms.append(calculate_variance(expected_probabilities))
+
+    return second_terms
 
 
 def load_probabilities_and_get_biases(slurm_id, hidden_arr, num_bootstrap=10000):
@@ -74,6 +120,10 @@ def load_probabilities_and_get_biases(slurm_id, hidden_arr, num_bootstrap=10000)
         diffs = []
         for i in range(num_bootstrap):
             indices = np.random.choice(50, 50, replace=True)
+            if slurm_id == 195683:
+                indices = np.random.choice(28, 28, replace=True)
+            elif slurm_id == 195684:
+                indices = np.random.choice(43, 43, replace=True)
             bootstrap_probabilities = probabilities[indices]
             bootstrap_variance = calculate_bias(bootstrap_probabilities, test_y_onehot)
             diff_variance = (bootstrap_variance - original_variance)
@@ -108,7 +158,10 @@ def plot_losses_and_std(slurm_id, hidden_arr, label=None, marker=None):
 
 def load_train_losses_and_get_average_and_std(slurm_id, hidden_arr):
     average_losses, stds = [], []
-    losses_all = parse_train_errors(slurm_id, hidden_arr)
+    if slurm_id == 167550:
+        losses_all = parse_167550(slurm_id, hidden_arr)
+    else:
+        losses_all = parse_train_errors(slurm_id, hidden_arr)
     for i, num_hidden in enumerate(hidden_arr):
         # losses = load_train_errors(slurm_id, num_hidden)
         losses = np.array(losses_all[i])
@@ -133,6 +186,14 @@ def plot_train_losses_and_std(slurm_id, hidden_arr, label=None, marker=None):
 def get_percentile(diffs, percentile):
     print(int(round(percentile * len(diffs))))
     return diffs[int(round(percentile * len(diffs)))]
+
+
+def find_variances(slurm_id, hidden_arr):
+    variances, lower_diffs, upper_diffs = [], [], []
+    for num_hidden in hidden_arr:
+        original_variance = get_variance(slurm_id, num_hidden)
+        variances.append(original_variance)
+    return variances
 
 
 def find_variances_and_diffs(slurm_id, hidden_arr):
@@ -178,6 +239,19 @@ def find_biases_and_diffs(slurm_id, hidden_arr, upper_percentile=0.995,
         lower_diffs.append(lower_diff)
 
     return variances, lower_diffs, upper_diffs
+
+
+def plot_three_variances(slurm_id, hidden_arr, num_initializations_per_split=10):
+    variances = find_variances(slurm_id, hidden_arr)
+    first_terms = load_probabilities_and_get_first_term(slurm_id, hidden_arr, num_initializations_per_split)
+    second_terms = load_probabilities_and_get_second_term(slurm_id, hidden_arr, num_initializations_per_split)
+
+    plot_line(hidden_arr, variances, label='Joint Variance', xscale='log', xlabel='Number of hidden units',
+    ylabel='Variance', title='Law of Total Variance for MNIST full data', filename='plots/{}_all_variances.pdf'.format(slurm_id))
+    plot_line(hidden_arr, first_terms, label='Variance due to Initialization', xscale='log', xlabel='Number of hidden units',
+    ylabel='Variance', title='Law of Total Variance for MNIST full data', filename='plots/{}_all_variances.pdf'.format(slurm_id))
+    plot_line(hidden_arr, second_terms, label='Variance due to Sampling', xscale='log', xlabel='Number of hidden units',
+    ylabel='Variance', title='Law of Total Variance for MNIST full data', filename='plots/{}_all_variances.pdf'.format(slurm_id))
 
 
 def plot_variances_with_diffs(slurm_id, hidden_arr, title=None, label=None, marker=None):
