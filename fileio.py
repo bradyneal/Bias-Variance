@@ -11,6 +11,8 @@ import pickle
 from models import ShallowNet
 from tensorboardX import SummaryWriter
 
+USE_NEW_NAMING_FORMAT = True
+
 USERNAME = getpass.getuser()
 OUTPUT_DIR = os.path.join('/network/tmp1', USERNAME, 'information-paths')
 
@@ -368,9 +370,11 @@ def get_filename(num_hidden, i, slurm_id, inter=0):
     """
     Return filename for a specific number of hidden units, run i, and SLURM id
     """
-    if int(slurm_id) > 161000:
+    # if int(slurm_id) > 161000:
+    if USE_NEW_NAMING_FORMAT:
         return COMMON_NAMING_FORMAT % (num_hidden, i, inter, slurm_id)
-    return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
+    else:
+        return OLD_COMMON_NAMING_FORMAT % (num_hidden, i, slurm_id)
 
 
 def get_train_test_modifiers(modifier=None):
