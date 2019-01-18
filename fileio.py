@@ -12,7 +12,7 @@ from models import ShallowNet
 from tensorboardX import SummaryWriter
 
 USERNAME = getpass.getuser()
-OUTPUT_DIR = os.path.join('/data/milatmp1', USERNAME, 'information-paths')
+OUTPUT_DIR = os.path.join('/network/tmp1', USERNAME, 'information-paths')
 
 SAVED_DIR = os.path.join(OUTPUT_DIR, 'saved')
 FINAL_TENSORBOARD_DIR = os.path.join(SAVED_DIR, 'tensorboard')
