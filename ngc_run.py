@@ -22,7 +22,7 @@ parser.add_argument('--no_bootstrap', action="store_true")
 parser.add_argument('--print_errors', choices=["all", "train_and_val"], default="all")
 parser.add_argument('--max_epochs', type=int, default=50)
 parser.add_argument('--save_best_model', action="store_true")
-parser.add_argument('--dataset', choices=["MNIST", "CIFAR10"], default="MNIST")
+parser.add_argument('--dataset', choices=["MNIST", "CIFAR10", "SVHN"], default="MNIST")
 parser.add_argument('--log_tensorboard', action="store_true")
 
 # Parameter to add number of initializations to run over

@@ -12,6 +12,9 @@ MNIST_K = 10
 CIFAR10_D = 3*1024
 CIFAR10_K = 10
 
+SVHN_D = 3*1024
+SVHN_K = 10
+
 def get_inter_model(model1, model2, theta):
     inter_model = deepcopy(model1)
     for p1, p2, inter_p in zip(model1.parameters(), model2.parameters(), inter_model.parameters()):
@@ -58,6 +61,9 @@ class ShallowNet(nn_custom_super):
         elif dataset == 'CIFAR10':
             self.input_dimension = CIFAR10_D
             self.output_dimension = CIFAR10_K
+        elif dataset == 'SVHN':
+            self.input_dimension = SVHN_D
+            self.output_dimension = SVHN_K
 
         self.fc1 = nn.Linear(self.input_dimension, num_hidden)
         self.fc2 = nn.Linear(num_hidden, self.output_dimension)

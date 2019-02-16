@@ -103,10 +103,16 @@ class DataModelComp:
 
     def get_datasets(self, dataset_function, transform):
         data_dir = os.path.join('data', self.dataset)
-        train = dataset_function(data_dir, train=True, download=True,
+        if self.dataset == 'SVHN':
+            train = dataset_function(data_dir, split='train', download=True,
                                  transform=transform)
-        test = dataset_function(data_dir, train=False, download=True,
+            test = dataset_function(data_dir, split='test', download=True,
                                 transform=transform)
+        else:
+            train = dataset_function(data_dir, train=True, download=True,
+                                   transform=transform)
+            test = dataset_function(data_dir, train=False, download=True,
+                                  transform=transform)
         return train, test
 
     def get_data_loaders(self, same_dist=False):
@@ -122,6 +128,10 @@ class DataModelComp:
             train, test = self.get_datasets(datasets.CIFAR10, transform)
         elif self.dataset == 'CIFAR100':
             train, test = self.get_datasets(datasets.CIFAR100, transform)
+        elif self.dataset == 'SVHN':
+            transform = transforms.Compose([transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            train, test = self.get_datasets(datasets.SVHN, transform)
 
         np.random.seed(self.train_val_split_seed)
 
