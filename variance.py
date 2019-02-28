@@ -19,6 +19,8 @@ plt.switch_backend('agg')
 MNIST_TEST_SIZE = 10000
 NUM_MNIST_CLASSES = 10
 
+train_errors = np.zeros([6,100])
+
 class Variance:
     def __init__(self, hidden_arr, num_seeds, slurm_id, dataset='MNIST', data_type='evaluate_probabilities', types=[2],
                  inter=0, data_model_comp_obj=None):
@@ -39,6 +41,20 @@ class Variance:
             raise Exception('Implement data model comp for other types')
 
     def load_data(self, num_hidden, run_i, type):
+        x = -1
+        if num_hidden is 10:
+            x = 0
+        elif num_hidden is 100:
+            x = 1
+        elif num_hidden is 1000:
+            x = 2
+        elif num_hidden is 10000:
+            x = 3
+        elif num_hidden is 40000:
+            x = 4
+        else:
+            x = 5
+
         seed = run_i
         if self.data_type == 'bitmap':
             data = load_fine_path_bitmaps(num_hidden, run_i, self.inter, self.slurm_id, type)
@@ -50,7 +66,7 @@ class Variance:
                     self.data_model_comp_obj = DataModelComp(ShallowNet(num_hidden), train_val_split_seed=0, bootstrap=True, dataset=self.dataset)
                 else:
                     print(self.dataset)
-                    self.data_model_comp_obj = DataModelComp(ShallowNet(num_hidden, self.dataset), train_val_split_seed=seed, num_train_after_split=100, dataset=self.dataset)
+                    self.data_model_comp_obj = DataModelComp(ShallowNet(num_hidden, self.dataset), train_val_split_seed=seed, num_train_after_split=None, dataset=self.dataset)
             self.data_model_comp_obj.load_saved_shallow_net(num_hidden, run_i, self.slurm_id, self.inter)  # Definitely do to load saved model
             weight_norms1, weight_norms2 = self.data_model_comp_obj.model.get_weight_norms()
 
@@ -61,6 +77,7 @@ class Variance:
                 data = log_prob.exp()
                 self.validation_loss = 1 - self.data_model_comp_obj.evaluate(0, 1)[0]
                 self.train_loss = 1 - self.data_model_comp_obj.evaluate(0, 0)[0]
+                train_errors[x][run_i] = self.train_loss
             elif self.data_type == 'evaluate_bitmaps':
                 values_returned_by_evaluate = self.data_model_comp_obj.evaluate(0, type)
                 data = values_returned_by_evaluate[2]
@@ -99,117 +116,59 @@ class Variance:
         if not isinstance(self.types, list):
             raise Exception('In get_variances, parameter types should be a list')
 
-        variances_by_train_val_test, losses_by_train_val_test, weight_norms1_by_train_val_test, weight_norms2_by_train_val_test = [], [], [], []
+        variances_by_train_val_test, losses_by_train_val_test, weight_norms_by_train_val_test = [], [], []
         biases = []
         for type in self.types:
-            variances_by_hidden_layer, losses_by_hidden_layer, weight_norms1_by_hidden_layer, weight_norms2_by_hidden_layer = [], [], [], []
+            variances_by_hidden_layer, losses_by_hidden_layer, weight_norms_by_hidden_layer = [], [], []
             self.val_combined_by_hidden = []
             for num_hidden in self.hidden_arr:
-                data_combined, losses_combined, weight_norms1_combined, weight_norms2_combined = None, None, None, None
+                data_combined, losses_combined, weight_norms_combined = None, None, None
                 train_combined, val_combined = [], []
                 print('Running for num_hidden: {}'.format(num_hidden))
-
-                # if type(self.num_seeds) is not list:
-                #    list_seeds = range(0, self.num_seeds)
-                # else:
-                list_seeds = range(self.num_seeds)
-
-                if self.slurm_id == 195683:
-                    list_seeds = list(range(0, 10)) + list(range(17, 27)) + list(range(34, 42))
-                for seed in list_seeds:
+                for seed in range(0, self.num_seeds):
                     print('Running for seed: {}'.format(seed))
 
-                    data, loss, weight_norms1, weight_norms2 = self.load_data(num_hidden, seed, type)
+                    data, loss, _, _ = self.load_data(num_hidden, seed, type)
                     print('data size:', data.size())
                     print('loss size:', loss.size())
-                    print('weight_norms1 size:', weight_norms1.size())
-                    print('weight_norms2 size:', weight_norms2.size())
 
                     data_combined = torch.cat((data_combined, data), 0) if data_combined is not None else data
                     losses_combined = torch.cat((losses_combined, loss), 0) if losses_combined is not None else loss
-                    weight_norms1_combined = torch.cat((weight_norms1_combined, weight_norms1), 0) if weight_norms1_combined is not None else weight_norms1
-                    weight_norms2_combined = torch.cat((weight_norms2_combined, weight_norms2), 0) if weight_norms2_combined is not None else weight_norms1
+
                     val_combined.append(self.validation_loss)
                     train_combined.append(self.train_loss)
 
                 # quantize variance combined
                 data_combined_quantized = data_combined.cpu().numpy().flatten()
-                plt.hist(data_combined_quantized, bins=100, density=True)
-                plt.savefig('plots/2density_plot_for_hidden_{}_inter_{}.jpg'.format(num_hidden, self.inter))
-                plt.close()
+                #plt.hist(data_combined_quantized, bins=100, density=True)
+                #plt.savefig('plots/2density_plot_for_hidden_{}_inter_{}.jpg'.format(num_hidden, self.inter))
+                #plt.close()
 
-                save_probabilities(self.slurm_id, num_hidden, data_combined.cpu().numpy())
-                # save_train_errors(self.slurm_id, num_hidden, np.array(train_combined))
-                # # plot this
-                # print('variance_combined size:', data_combined.size())
-                # print('loss_combined size:', losses_combined.size())
-                # print('weight_norms1_combined size:', weight_norms1_combined.size())
-                # print('weight_norms2_combined size:', weight_norms2_combined.size())
-                #
-                # if data_combined is None:
-                #     print('%s is none for num_hidden=%d, type=%d' %
-                #           (self.data_type, num_hidden, type))
-                #     continue
-                # print('Calculating mean')
-                #
-                # mean = torch.mean(data_combined, 0)
-                #
-                # # Calculate bias
-                # test = datasets.MNIST('./data', train=False, download=True, transform=transforms.ToTensor())
-                # test_loader = torch.utils.data.DataLoader(test, batch_size=MNIST_TEST_SIZE)
-                # _, y = next(iter(test_loader))
-                #
-                # # get one-hot encoding (should be a separate function)
-                # y_onehot = torch.FloatTensor(MNIST_TEST_SIZE, NUM_MNIST_CLASSES)
-                # y_onehot.zero_()
-                # y_onehot.scatter_(1, y.unsqueeze(1), 1)
-                #
-                # bias = torch.mean(mean - y_onehot)
-                # biases.append(bias)
-                ######################
+                save_probabilities(self.slurm_id, num_hidden, self.inter, data_combined.cpu().numpy())
 
-            #     self.calculate_and_save_individual_variances(data_combined)
-            #     variance = self.calculate_variance(data_combined, mean)
-            #     variance = torch.Tensor([variance]).unsqueeze(0)
-            #     relative_error = sqrt(2/self.num_seeds)
-            #     std_variance = variance * relative_error
-            #     variances_by_hidden_layer.append(torch.cat([variance, std_variance, std_variance]).numpy())
-            #     print('variance mean size:', variance.size())
-            #     print('variance std size:', std_variance.size())
-            #
-            #     mean_loss = losses_combined.mean(0, keepdim=True)
-            #     std_loss = losses_combined.std(0, keepdim=True)
-            #     losses_by_hidden_layer.append(torch.cat([mean_loss, std_loss, std_loss]).numpy())
-            #     print('loss mean size:', mean_loss.size())
-            #     print('loss std size:', std_loss.size())
-            #
-            #     mean_weight_norm1 = weight_norms1_combined.mean(0, keepdim=True)
-            #     std_weight_norm1 = weight_norms1_combined.std(0, keepdim=True)
-            #     weight_norms1_by_hidden_layer.append(torch.cat([mean_weight_norm1, std_weight_norm1, std_weight_norm1]).data.cpu().numpy())
-            #     print('weight_norm1 mean size:', mean_weight_norm1.size())
-            #     print('weight_norm1 std size:', std_weight_norm1.size())
-            #
-            #     mean_weight_norm2 = weight_norms2_combined.mean(0, keepdim=True)
-            #     std_weight_norm2 = weight_norms2_combined.std(0, keepdim=True)
-            #     weight_norms2_by_hidden_layer.append(torch.cat([mean_weight_norm2, std_weight_norm2, std_weight_norm2]).data.cpu().numpy())
-            #     print('weight_norm2 mean size:', mean_weight_norm2.size())
-            #     print('weight_norm2 std size:', std_weight_norm2.size())
-            #
-            #     self.val_combined_by_hidden.append(val_combined)
-            #
-            # variances_by_train_val_test.append(variances_by_hidden_layer)
-            # losses_by_train_val_test.append(losses_by_hidden_layer)
-            # weight_norms1_by_train_val_test.append(weight_norms1_by_hidden_layer)
-            # weight_norms2_by_train_val_test.append(weight_norms2_by_hidden_layer)
+                mean = torch.mean(data_combined, 0)
 
-        variances = np.array([variances_by_train_val_test, losses_by_train_val_test, weight_norms1_by_train_val_test, weight_norms2_by_train_val_test])
+                self.calculate_and_save_individual_variances(data_combined)
+                variance = self.calculate_variance(data_combined, mean)
+                variance = torch.Tensor([variance]).unsqueeze(0)
+                relative_error = sqrt(2/self.num_seeds)
+                std_variance = variance * relative_error
+                variances_by_hidden_layer.append([variance.item(), std_variance.item(), std_variance.item()])
+                print('variance mean size:', variance.size())
+                print('variance std size:', std_variance.size())
 
-        # Save variances
-        save_variance_data(self.slurm_id, variances, 'all')
-        # file_name = 'saved/{}_all.npy'.format(self.slurm_id)
-        # np.save(file_name, variances)
+                mean_loss = losses_combined.mean(0, keepdim=True)
+                std_loss = losses_combined.std(0, keepdim=True)
+                losses_by_hidden_layer.append([mean_loss.item(), std_loss.item(), std_loss.item()])
+                print('loss mean size:', mean_loss.size())
+                print('loss std size:', std_loss.size())
 
-        return variances  # , biases
+                self.val_combined_by_hidden.append(val_combined)
+
+            variances_by_train_val_test.append(variances_by_hidden_layer)
+            losses_by_train_val_test.append(losses_by_hidden_layer)
+
+        variances = [variances_by_train_val_test, losses_by_train_val_test, weight_norms_by_train_val_test]
 
     def plot_variances(self, variances):
         fig, ax = plt.subplots()
@@ -252,21 +211,21 @@ class Variance:
     def calculate_plot_and_return_variances(self):
         sns.set()
         variances = self.get_variances()
-        print("VARIANCES SIZE", variances.shape)
-        print(variances)
-        self.plot_variances(variances)
-        print(variances)
+        np.save("./cifar_train.npy", train_errors)
+        # print("VARIANCES SIZE", variances.shape)
+        # print(variances)
+        # self.plot_variances(variances)
+        # print(variances)
 
-        # dir_name = 'saved/'
-        # file_name = '{}_variances.npy'.format(self.slurm_id)
-        # np.save(dir_name+file_name, variances)
-        print('Validation values combined:', self.val_combined_by_hidden)
-        return variances
+        # # dir_name = 'saved/'
+        # # file_name = '{}_variances.npy'.format(self.slurm_id)
+        # # np.save(dir_name+file_name, variances)
+        # print('Validation values combined:', self.val_combined_by_hidden)
+        # return variances
 
     def get_conf_int(self, variance, conf_perc=.95):
          '''
          Return tuple (lower, upper) of confidence interval for variance.
-
          Assumption: random variables are independent
          (which is, of course, not true in the learning setting)
          '''

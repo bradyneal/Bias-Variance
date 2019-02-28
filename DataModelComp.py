@@ -1,3 +1,5 @@
+#!/usr/bin/env python -W ignore::DeprecationWarning
+
 from __future__ import print_function, division
 import torch
 import torch.nn as nn
@@ -103,16 +105,10 @@ class DataModelComp:
 
     def get_datasets(self, dataset_function, transform):
         data_dir = os.path.join('data', self.dataset)
-        if self.dataset == 'SVHN':
-            train = dataset_function(data_dir, split='train', download=True,
+        train = dataset_function(data_dir, train=True, download=True,
                                  transform=transform)
-            test = dataset_function(data_dir, split='test', download=True,
+        test = dataset_function(data_dir, train=False, download=True,
                                 transform=transform)
-        else:
-            train = dataset_function(data_dir, train=True, download=True,
-                                   transform=transform)
-            test = dataset_function(data_dir, train=False, download=True,
-                                  transform=transform)
         return train, test
 
     def get_data_loaders(self, same_dist=False):
@@ -128,10 +124,6 @@ class DataModelComp:
             train, test = self.get_datasets(datasets.CIFAR10, transform)
         elif self.dataset == 'CIFAR100':
             train, test = self.get_datasets(datasets.CIFAR100, transform)
-        elif self.dataset == 'SVHN':
-            transform = transforms.Compose([transforms.ToTensor(),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-            train, test = self.get_datasets(datasets.SVHN, transform)
 
         np.random.seed(self.train_val_split_seed)
 
@@ -297,9 +289,10 @@ class DataModelComp:
         for data, target in data_loader:
             if self.cuda:
                 data, target = data.cuda(), target.cuda()
-            data, target = Variable(data, volatile=True), Variable(target)
+            with torch.no_grad():
+                data, target = Variable(data), Variable(target)
             prob = self.model(data)
-            total_loss += F.nll_loss(prob, target, size_average=False).data[0]  # sum up batch loss
+            total_loss += F.nll_loss(prob, target, reduction='sum').item()  # sum up batch loss
             pred = prob.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
             correct = torch.cat([correct, batch_correct], 0)

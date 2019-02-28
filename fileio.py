@@ -100,8 +100,8 @@ def save_model(model, num_hidden, i, slurm_id=get_slurm_id(), inter=0):
     return torch.save(model, get_model_path(num_hidden, i, slurm_id, inter))
 
 
-def save_probabilities(slurm_id, num_hidden, probabilities):
-    return np.save(get_probabilities_path(slurm_id, num_hidden), probabilities)
+def save_probabilities(slurm_id, num_hidden, inter, probabilities):
+    return np.save(get_probabilities_path(slurm_id, num_hidden, inter), probabilities)
 
 
 def save_correlations(slurm_id, correlations, matrix_num):
@@ -166,8 +166,8 @@ def load_model(num_hidden, i, slurm_id, inter=0):
     return load_torch(get_model_path(num_hidden, i, slurm_id, inter))
 
 
-def load_probabilities(slurm_id, num_hidden):
-    return np.load(get_probabilities_path(slurm_id, num_hidden))
+def load_probabilities(slurm_id, num_hidden, inter=0):
+    return np.load(get_probabilities_path(slurm_id, num_hidden, inter))
 
 
 def load_correlations(slurm_id, matrix_num):
@@ -298,8 +298,8 @@ def get_hyperparam_indi_plot_path(first_job_id, num_hidden, option):
     return os.path.join(HYPERPARAM_DIR, 'shallow{}_option{}_job{}.jpg'.format(num_hidden, option, first_job_id))
 
 
-def get_probabilities_path(slurm_id, num_hidden):
-    return os.path.join(PROB_DIR, 'shallow{}_job{}.npy'.format(num_hidden, slurm_id))
+def get_probabilities_path(slurm_id, num_hidden, inter):
+    return os.path.join(PROB_DIR, 'shallow{}_job{}_inter{}.npy'.format(num_hidden, slurm_id, inter))
 
 
 def get_correlations_path(slurm_id, matrix_num):
